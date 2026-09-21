@@ -40,6 +40,18 @@ export default function DoadoresPage() {
 
   useEffect(() => {
     loadData();
+
+    const handleUpdate = () => loadData();
+    window.addEventListener("focus", handleUpdate);
+    window.addEventListener("hemoalerta_donor_updated", handleUpdate);
+
+    const interval = setInterval(loadData, 5000);
+
+    return () => {
+      window.removeEventListener("focus", handleUpdate);
+      window.removeEventListener("hemoalerta_donor_updated", handleUpdate);
+      clearInterval(interval);
+    };
   }, [page, itemsPerPage, tipo]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -53,7 +65,7 @@ export default function DoadoresPage() {
   const doadoresUniversais = stats?.doadoresUniversais ?? 0;
 
   return (
-    <div style={{ maxWidth: "1180px", margin: "0 auto", padding: "clamp(20px, 4vw, 40px)" }}>
+    <div style={{ maxWidth: "1180px", margin: "0 auto", padding: "clamp(24px, 4vw, 40px)" }}>
       <div className="panel">
         <div className="panel__head">
           <div>

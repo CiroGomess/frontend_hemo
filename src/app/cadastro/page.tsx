@@ -99,6 +99,9 @@ export default function CadastroPage() {
       });
 
       setSuccess("Cadastro confirmado com sucesso! Obrigado por salvar vidas.");
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("hemoalerta_donor_updated"));
+      }
       setFormData({
         nome: "",
         tipo: "",

@@ -10,11 +10,27 @@ export default function Navbar() {
   const pathname = usePathname();
   const [totalDoadores, setTotalDoadores] = useState<number>(0);
 
-  useEffect(() => {
+  const loadStats = () => {
     fetchStats()
       .then((data) => setTotalDoadores(data.totalDoadores))
       .catch(() => {});
-  }, []);
+  };
+
+  useEffect(() => {
+    loadStats();
+
+    const handleUpdate = () => loadStats();
+    window.addEventListener("focus", handleUpdate);
+    window.addEventListener("hemoalerta_donor_updated", handleUpdate);
+
+    const interval = setInterval(loadStats, 4000);
+
+    return () => {
+      window.removeEventListener("focus", handleUpdate);
+      window.removeEventListener("hemoalerta_donor_updated", handleUpdate);
+      clearInterval(interval);
+    };
+  }, [pathname]);
 
   return (
     <header className="topbar">
