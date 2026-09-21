@@ -201,3 +201,109 @@ export async function fetchHemocentros(params?: {
   if (!res.ok) throw new Error("Erro ao listar hemocentros");
   return res.json();
 }
+
+export async function createHemocentro(data: {
+  nome: string;
+  tipo: string;
+  cidade: string;
+  estado: string;
+  endereco: string;
+  telefone: string;
+  horario?: string;
+}): Promise<{ sucesso: boolean; mensagem: string; hemocentro: Hemocentro }> {
+  const res = await fetch(`${API_BASE_URL}/hemocentros`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  const resData = await res.json();
+  if (!res.ok) throw new Error(resData.detail || "Erro ao cadastrar hemocentro");
+  return resData;
+}
+
+export async function deleteHemocentro(id: string): Promise<{ sucesso: boolean; mensagem: string }> {
+  const res = await fetch(`${API_BASE_URL}/hemocentros/${id}`, {
+    method: "DELETE",
+  });
+  const resData = await res.json();
+  if (!res.ok) throw new Error(resData.detail || "Erro ao remover hemocentro");
+  return resData;
+}
+
+// ---------------- ADMIN & WHATSAPP VENOM API ----------------
+
+export interface WhatsAppStatus {
+  status: "DISCONNECTED" | "STARTING" | "QRCODE_READY" | "CONNECTED" | "ERROR" | "OFFLINE";
+  hasQrCode: boolean;
+  deviceInfo?: any;
+  lastError?: string | null;
+  timestamp?: string;
+}
+
+export async function adminLogin(username: string, password: string) {
+  const res = await fetch(`${API_BASE_URL}/admin/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Usuário ou senha incorretos");
+  return data;
+}
+
+export async function fetchWhatsAppStatus(): Promise<WhatsAppStatus> {
+  const res = await fetch(`${API_BASE_URL}/admin/whatsapp/status`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Erro ao consultar status do WhatsApp");
+  return res.json();
+}
+
+export async function fetchWhatsAppQRCode(): Promise<{ status: string; qrcode: string | null }> {
+  const res = await fetch(`${API_BASE_URL}/admin/whatsapp/qrcode`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Erro ao obter QR Code do WhatsApp");
+  return res.json();
+}
+
+export async function connectWhatsApp(): Promise<{ success: boolean; message: string }> {
+  const res = await fetch(`${API_BASE_URL}/admin/whatsapp/connect`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+  return res.json();
+}
+
+export async function disconnectWhatsApp(): Promise<{ success: boolean; message: string }> {
+  const res = await fetch(`${API_BASE_URL}/admin/whatsapp/disconnect`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+  return res.json();
+}
+
+export async function sendWhatsAppTest(to: string, message: string) {
+  const res = await fetch(`${API_BASE_URL}/admin/whatsapp/send-test`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ to, message }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || data.error || "Erro ao enviar teste");
+  return data;
+}
+
+export async function broadcastWhatsAppAlert(payload: {
+  tipoSanguineo: string;
+  estado: string;
+  cidade?: string;
+  hospital?: string;
+  urgencia?: string;
+}) {
+  const res = await fetch(`${API_BASE_URL}/admin/whatsapp/broadcast-alert`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || data.error || "Erro ao disparar alertas");
+  return data;
+}
+

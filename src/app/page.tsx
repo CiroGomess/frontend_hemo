@@ -1,6 +1,23 @@
 import Link from "next/link";
 import { fetchStats } from "@/services/api";
-import { Star, CheckCircle2 } from "lucide-react";
+import {
+  Heart,
+  Droplet,
+  Users,
+  Bell,
+  ShieldCheck,
+  Activity,
+  ArrowRight,
+  Clock,
+  MapPin,
+  Sparkles,
+  Siren,
+  CheckCircle2,
+  Lock,
+  Smartphone,
+  Hospital,
+  AlertCircle,
+} from "lucide-react";
 
 export const revalidate = 0;
 
@@ -17,652 +34,717 @@ export default async function HomePage() {
     const data = await fetchStats();
     stats = { ...stats, ...data };
   } catch {
-    // Caso a API esteja iniciando
+    // API fallback
   }
 
+  const bloodTypes = [
+    { type: "O-", label: "Doador Universal", desc: "Compatível com todos os 8 tipos sanguíneos" },
+    { type: "O+", label: "Mais Frequente", desc: "Compatível com todos os tipos positivos" },
+    { type: "A-", label: "Compatibilidade Alta", desc: "Doa para A+, A-, AB+ e AB-" },
+    { type: "A+", label: "Alta Demanda", desc: "Doa para A+ e AB+" },
+    { type: "B-", label: "Tipo Raro", desc: "Doa para B+, B-, AB+ e AB-" },
+    { type: "B+", label: "Demanda Contínua", desc: "Doa para B+ e AB+" },
+    { type: "AB-", label: "Extremamente Raro", desc: "Doa para AB+ e AB-" },
+    { type: "AB+", label: "Receptor Universal", desc: "Recebe de todos os tipos sanguíneos" },
+  ];
+
   return (
-    <div style={{ fontFamily: "var(--font-body), sans-serif", color: "#1c1418" }}>
-      {/* ========================= HERO SECTION ========================= */}
-      <div
+    <div style={{ background: "#fafaf9", color: "#1e1e24", overflowX: "hidden" }}>
+      {/* ========================= HERO SECTION PREMIUM ========================= */}
+      <section
         style={{
-          background: "linear-gradient(135deg, #d71e3a 0%, #8b0000 100%)",
-          color: "white",
-          padding: 0,
-          marginBottom: 0,
           position: "relative",
+          background: "radial-gradient(120% 120% at 50% -10%, #fff1f2 0%, #fafaf9 60%, #f4f4f5 100%)",
+          padding: "clamp(48px, 8vw, 84px) clamp(20px, 4vw, 48px) clamp(60px, 10vw, 100px)",
+          borderBottom: "1px solid #e4e4e7",
           overflow: "hidden",
-          minHeight: "90vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
         }}
       >
-        {/* Background Pattern */}
-        <div style={{ position: "absolute", inset: 0, opacity: 0.15 }}>
-          <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern id="grid" width="80" height="80" patternUnits="userSpaceOnUse">
-                <path d="M 80 0 L 0 0 0 80" fill="none" stroke="white" strokeWidth="0.5" />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#grid)" />
-          </svg>
-        </div>
-
-        {/* Decorative elements */}
+        {/* Glow de fundo */}
         <div
           style={{
             position: "absolute",
-            top: "-100px",
-            right: "-100px",
-            width: "400px",
+            top: "-120px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: "800px",
             height: "400px",
-            background: "rgba(255,255,255,0.1)",
-            borderRadius: "50%",
-            filter: "blur(40px)",
+            background: "radial-gradient(ellipse, rgba(225, 29, 72, 0.12) 0%, rgba(225, 29, 72, 0) 70%)",
+            pointerEvents: "none",
           }}
-        ></div>
-        <div
-          style={{
-            position: "absolute",
-            bottom: "-50px",
-            left: "-50px",
-            width: "300px",
-            height: "300px",
-            background: "rgba(255,255,255,0.08)",
-            borderRadius: "50%",
-            filter: "blur(30px)",
-          }}
-        ></div>
+        />
 
-        <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "60px 40px", position: "relative", zIndex: 1, width: "100%" }}>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            {/* LEFT SIDE */}
+        <div style={{ maxWidth: "1200px", margin: "0 auto", position: "relative", zIndex: 1 }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+              gap: "48px",
+              alignItems: "center",
+            }}
+          >
+            {/* Lado Esquerdo: Mensagem e CTAs */}
             <div>
+              {/* Badge de Destaque */}
               <div
                 style={{
-                  display: "inline-block",
-                  background: "rgba(255,255,255,0.15)",
-                  backdropFilter: "blur(10px)",
-                  padding: "10px 24px",
-                  borderRadius: "50px",
-                  border: "1px solid rgba(255,255,255,0.3)",
-                  marginBottom: "32px",
-                  fontSize: "0.9rem",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  background: "#fff",
+                  border: "1px solid #fecdd3",
+                  padding: "6px 14px",
+                  borderRadius: "999px",
+                  fontSize: "0.85rem",
                   fontWeight: 600,
-                  letterSpacing: "0.5px",
+                  color: "#be123c",
+                  boxShadow: "0 2px 6px rgba(225, 29, 72, 0.08)",
+                  marginBottom: "20px",
                 }}
               >
-                <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
-                  <span
-                    style={{
-                      width: "8px",
-                      height: "8px",
-                      background: "#ff3d5a",
-                      borderRadius: "50%",
-                      boxShadow: "0 0 10px #ff3d5a",
-                    }}
-                  ></span>
-                  Plataforma Líder em Doações de Sangue
-                </span>
+                <span
+                  style={{
+                    width: "8px",
+                    height: "8px",
+                    borderRadius: "50%",
+                    background: "#e11d48",
+                    display: "inline-block",
+                    boxShadow: "0 0 8px #e11d48",
+                  }}
+                />
+                <span>Rede Nacional de Doação de Sangue • Conexão em Tempo Real</span>
               </div>
 
+              {/* Título Principal */}
               <h1
                 style={{
-                  fontSize: "clamp(2.8rem, 5vw, 4.5rem)",
-                  fontWeight: 900,
-                  marginBottom: "28px",
+                  fontSize: "clamp(2.4rem, 4.5vw, 3.8rem)",
+                  fontWeight: 800,
                   fontFamily: "var(--font-display), sans-serif",
-                  lineHeight: 1.1,
-                  letterSpacing: "-1px",
+                  lineHeight: 1.12,
+                  letterSpacing: "-0.03em",
+                  color: "#0f172a",
+                  marginBottom: "20px",
                 }}
               >
-                Salve Vidas em <span style={{ color: "#ff3d5a" }}>Minutos</span>
+                A pessoa certa. <br />
+                No momento certo. <br />
+                <span
+                  style={{
+                    background: "linear-gradient(135deg, #e11d48 0%, #be123c 50%, #881337 100%)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                  }}
+                >
+                  Salvando vidas em minutos.
+                </span>
               </h1>
 
+              {/* Subtítulo */}
               <p
                 style={{
-                  fontSize: "1.25rem",
-                  opacity: 0.95,
-                  marginBottom: "50px",
-                  lineHeight: 1.8,
-                  fontWeight: 300,
-                  maxWidth: "500px",
+                  fontSize: "1.12rem",
+                  lineHeight: 1.65,
+                  color: "#475569",
+                  marginBottom: "36px",
+                  maxWidth: "540px",
                 }}
               >
-                Conecte-se a uma rede nacional de doadores voluntários. Sua doação pode salvar até <strong>4 vidas</strong>. Cadastre-se em 60 segundos.
+                Conectamos doadores de sangue voluntários a hemocentros e hospitais em situações críticas através do WhatsApp. Sua doação pode salvar até <strong>4 vidas</strong> com total segurança e respeito à LGPD.
               </p>
 
-              <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", marginBottom: "60px" }}>
+              {/* Ações Principais */}
+              <div style={{ display: "flex", gap: "14px", flexWrap: "wrap", marginBottom: "40px" }}>
                 <Link
                   href="/cadastro"
                   style={{
-                    background: "#ff3d5a",
-                    color: "white",
-                    border: "none",
-                    padding: "18px 50px",
-                    fontSize: "1.05rem",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    background: "linear-gradient(135deg, #e11d48, #be123c)",
+                    color: "#fff",
+                    padding: "14px 28px",
+                    borderRadius: "10px",
                     fontWeight: 700,
-                    borderRadius: "8px",
-                    cursor: "pointer",
-                    fontFamily: "var(--font-display), sans-serif",
-                    transition: "all 0.3s ease",
-                    boxShadow: "0 10px 30px rgba(255, 61, 90, 0.4)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                    display: "inline-block",
+                    fontSize: "1rem",
                     textDecoration: "none",
+                    boxShadow: "0 6px 20px rgba(225, 29, 72, 0.28)",
+                    transition: "all 0.2s ease",
                   }}
-                  className="hover:scale-105"
                 >
-                  Começar Agora
+                  <Heart size={18} fill="#fff" />
+                  <span>Cadastrar como Doador</span>
+                  <ArrowRight size={16} />
                 </Link>
 
-                <a
-                  href="#vantagens"
+                <Link
+                  href="/emergencia"
                   style={{
-                    background: "transparent",
-                    color: "white",
-                    border: "2px solid white",
-                    padding: "16px 40px",
-                    fontSize: "1.05rem",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    background: "#fff",
+                    color: "#be123c",
+                    border: "1.5px solid #fecdd3",
+                    padding: "14px 24px",
+                    borderRadius: "10px",
                     fontWeight: 700,
-                    borderRadius: "8px",
-                    cursor: "pointer",
-                    fontFamily: "var(--font-display), sans-serif",
-                    transition: "all 0.3s ease",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                    display: "inline-block",
+                    fontSize: "0.95rem",
                     textDecoration: "none",
+                    transition: "all 0.2s ease",
                   }}
-                  className="hover:bg-white/10"
                 >
-                  Saiba Mais
-                </a>
+                  <Siren size={18} />
+                  <span>Emergência SOS</span>
+                </Link>
               </div>
 
-              {/* Trust badges */}
-              <div style={{ display: "flex", gap: "30px", flexWrap: "wrap", paddingTop: "20px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <svg style={{ width: "24px", height: "24px", color: "#ff3d5a" }} viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                  </svg>
-                  <span style={{ fontSize: "0.9rem", opacity: 0.9 }}>LGPD Compliant</span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <svg style={{ width: "24px", height: "24px", color: "#ff3d5a" }} viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
-                  </svg>
-                  <span style={{ fontSize: "0.9rem", opacity: 0.9 }}>100% Seguro</span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <svg style={{ width: "24px", height: "24px", color: "#ff3d5a" }} viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" />
-                  </svg>
-                  <span style={{ fontSize: "0.9rem", opacity: 0.9 }}>Voluntário & Gratuito</span>
-                </div>
-              </div>
-            </div>
-
-            {/* RIGHT SIDE - Illustration */}
-            <div style={{ position: "relative", display: "flex", justifyContent: "center", alignItems: "center" }}>
-              <svg
-                style={{ width: "100%", maxWidth: "450px", filter: "drop-shadow(0 30px 70px rgba(0,0,0,0.4))" }}
-                viewBox="0 0 400 550"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
+              {/* Selos de Confiança */}
+              <div
+                style={{
+                  display: "flex",
+                  gap: "20px",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  paddingTop: "20px",
+                  borderTop: "1px solid #e4e4e7",
+                }}
               >
-                <defs>
-                  <linearGradient id="bloodGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" style={{ stopColor: "#ff5a7e", stopOpacity: 0.95 }} />
-                    <stop offset="100%" style={{ stopColor: "#e63354", stopOpacity: 1 }} />
-                  </linearGradient>
-                  <linearGradient id="bagGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" style={{ stopColor: "#ffffff", stopOpacity: 1 }} />
-                    <stop offset="100%" style={{ stopColor: "#f5f5f5", stopOpacity: 1 }} />
-                  </linearGradient>
-                </defs>
-
-                {/* IV Tube */}
-                <path d="M 200 80 Q 180 120 160 180 Q 150 210 145 250" stroke="rgba(200,200,200,0.8)" strokeWidth="6" strokeLinecap="round" />
-                <path d="M 200 80 Q 220 120 240 180 Q 250 210 255 250" stroke="rgba(200,200,200,0.8)" strokeWidth="6" strokeLinecap="round" />
-
-                {/* Needle connection points */}
-                <circle cx="160" cy="250" r="8" fill="rgba(180,180,180,0.6)" />
-                <circle cx="240" cy="250" r="8" fill="rgba(180,180,180,0.6)" />
-
-                {/* Blood bag main body */}
-                <rect x="110" y="120" width="180" height="240" rx="24" fill="url(#bagGradient)" stroke="rgba(150,150,150,0.3)" strokeWidth="1.5" />
-
-                {/* Blood inside bag */}
-                <rect x="120" y="140" width="160" height="200" rx="18" fill="url(#bloodGradient)" />
-
-                {/* Shine effect on blood */}
-                <ellipse cx="160" cy="160" rx="45" ry="35" fill="rgba(255,255,255,0.25)" />
-
-                {/* Medical Cross Icon */}
-                <g transform="translate(200, 150)">
-                  <rect x="-10" y="-22" width="20" height="44" fill="white" />
-                  <rect x="-22" y="-10" width="44" height="20" fill="white" />
-                </g>
-
-                {/* Decorative dots in blood */}
-                <circle cx="170" cy="200" r="5" fill="rgba(255,255,255,0.4)" />
-                <circle cx="145" cy="230" r="4" fill="rgba(255,255,255,0.3)" />
-                <circle cx="210" cy="210" r="3.5" fill="rgba(255,255,255,0.35)" />
-
-                {/* Bag bottom port */}
-                <ellipse cx="200" cy="360" rx="22" ry="16" fill="rgba(200,50,70,0.8)" />
-                <path d="M 185 360 Q 185 375 200 385 Q 215 375 215 360" fill="rgba(180,40,60,0.9)" />
-
-                {/* Top connection port */}
-                <rect x="190" y="110" width="20" height="15" rx="3" fill="rgba(180,180,180,0.7)" />
-                <circle cx="200" cy="108" r="4" fill="rgba(150,150,150,0.8)" />
-
-                {/* Shadow under bag */}
-                <ellipse cx="200" cy="365" rx="95" ry="12" fill="rgba(0,0,0,0.08)" />
-
-                {/* Decorative hearts */}
-                <g transform="translate(80, 420)" opacity="0.5">
-                  <path d="M 0 -6 C -4 -9 -11 -9 -13 -4 C -15 0 -11 9 0 15 C 11 9 15 0 13 -4 C 11 -9 4 -9 0 -6" fill="rgba(255, 61, 90, 0.6)" />
-                </g>
-                <g transform="translate(320, 420)" opacity="0.5">
-                  <path d="M 0 -6 C -4 -9 -11 -9 -13 -4 C -15 0 -11 9 0 15 C 11 9 15 0 13 -4 C 11 -9 4 -9 0 -6" fill="rgba(255, 61, 90, 0.6)" />
-                </g>
-
-                {/* Decorative circles */}
-                <circle cx="70" cy="180" r="28" fill="rgba(255,255,255,0.08)" />
-                <circle cx="330" cy="220" r="40" fill="rgba(255,255,255,0.06)" />
-              </svg>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ========================= STATS SECTION ========================= */}
-      <div style={{ background: "linear-gradient(180deg, #f8e8ec 0%, white 100%)", padding: "80px 40px", borderBottom: "1px solid #e5e5e5" }}>
-        <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "40px" }}>
-            {/* Stat 1 */}
-            <div style={{ textAlign: "center", padding: "20px" }}>
-              <div style={{ fontSize: "3.5rem", fontWeight: 900, color: "#d71e3a", fontFamily: "var(--font-display), sans-serif", marginBottom: "8px" }}>
-                {stats.totalDoadores}
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.85rem", color: "#64748b", fontWeight: 500 }}>
+                  <ShieldCheck size={18} color="#16a34a" />
+                  <span>LGPD Compliant</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.85rem", color: "#64748b", fontWeight: 500 }}>
+                  <CheckCircle2 size={18} color="#16a34a" />
+                  <span>100% Gratuito</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.85rem", color: "#64748b", fontWeight: 500 }}>
+                  <Smartphone size={18} color="#16a34a" />
+                  <span>WhatsApp Oficial</span>
+                </div>
               </div>
-              <p style={{ color: "#1c1418", fontSize: "1.05rem", fontWeight: 600, margin: 0 }}>Doadores Cadastrados</p>
-              <div style={{ width: "50px", height: "3px", background: "linear-gradient(90deg, #d71e3a, #ff3d5a)", margin: "16px auto 0" }}></div>
             </div>
 
-            {/* Stat 2 */}
-            <div style={{ textAlign: "center", padding: "20px" }}>
-              <div style={{ fontSize: "3.5rem", fontWeight: 900, color: "#d71e3a", fontFamily: "var(--font-display), sans-serif", marginBottom: "8px" }}>
-                27
-              </div>
-              <p style={{ color: "#1c1418", fontSize: "1.05rem", fontWeight: 600, margin: 0 }}>Estados Cobertos</p>
-              <div style={{ width: "50px", height: "3px", background: "linear-gradient(90deg, #d71e3a, #ff3d5a)", margin: "16px auto 0" }}></div>
-            </div>
-
-            {/* Stat 3 */}
-            <div style={{ textAlign: "center", padding: "20px" }}>
-              <div style={{ fontSize: "3.5rem", fontWeight: 900, color: "#d71e3a", fontFamily: "var(--font-display), sans-serif", marginBottom: "8px" }}>
-                {stats.vidasSalvasEstimadas}
-              </div>
-              <p style={{ color: "#1c1418", fontSize: "1.05rem", fontWeight: 600, margin: 0 }}>Vidas Salvas</p>
-              <div style={{ width: "50px", height: "3px", background: "linear-gradient(90deg, #d71e3a, #ff3d5a)", margin: "16px auto 0" }}></div>
-            </div>
-
-            {/* Stat 4 */}
-            <div style={{ textAlign: "center", padding: "20px" }}>
-              <div style={{ fontSize: "3.5rem", fontWeight: 900, color: "#d71e3a", fontFamily: "var(--font-display), sans-serif", marginBottom: "8px" }}>
-                100%
-              </div>
-              <p style={{ color: "#1c1418", fontSize: "1.05rem", fontWeight: 600, margin: 0 }}>Voluntário e Gratuito</p>
-              <div style={{ width: "50px", height: "3px", background: "linear-gradient(90deg, #d71e3a, #ff3d5a)", margin: "16px auto 0" }}></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ========================= FEATURES SECTION ========================= */}
-      <div id="vantagens" style={{ padding: "100px 40px", background: "white" }}>
-        <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
-          <div style={{ textAlign: "center", marginBottom: "80px" }}>
-            <span style={{ display: "inline-block", color: "#d71e3a", fontWeight: 700, fontSize: "0.9rem", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "12px" }}>
-              Vantagens
-            </span>
-            <h2 style={{ fontSize: "clamp(2.2rem, 4vw, 3.2rem)", fontFamily: "var(--font-display), sans-serif", marginBottom: "20px", color: "#1c1418", fontWeight: 900 }}>
-              Por que HemoAlerta?
-            </h2>
-            <p style={{ color: "#897b80", fontSize: "1.15rem", maxWidth: "600px", margin: "0 auto", lineHeight: 1.6 }}>
-              Plataforma segura, rápida e confiável para conectar doadores voluntários com quem mais precisa.
-            </p>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "32px" }}>
-            {/* Card 1 */}
-            <div className="p-10 bg-white border border-zinc-100 rounded-2xl hover:shadow-xl hover:border-red-100 transition-all duration-300">
-              <div style={{ width: "60px", height: "60px", background: "linear-gradient(135deg, #d71e3a, #ff3d5a)", borderRadius: "12px", display: "flex", alignItems: "center", justifyItems: "center", justifyContent: "center", marginBottom: "24px" }}>
-                <svg style={{ width: "32px", height: "32px", color: "white" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>
-              </div>
-              <h3 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "12px", color: "#1c1418" }}>Alertas Instantâneos</h3>
-              <p style={{ color: "#897b80", lineHeight: 1.7, fontSize: "0.95rem" }}>Receba notificações em tempo real via WhatsApp quando há emergências de doação.</p>
-            </div>
-
-            {/* Card 2 */}
-            <div className="p-10 bg-white border border-zinc-100 rounded-2xl hover:shadow-xl hover:border-red-100 transition-all duration-300">
-              <div style={{ width: "60px", height: "60px", background: "linear-gradient(135deg, #d71e3a, #ff3d5a)", borderRadius: "12px", display: "flex", alignItems: "center", justifyItems: "center", justifyContent: "center", marginBottom: "24px" }}>
-                <svg style={{ width: "32px", height: "32px", color: "white" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
-              </div>
-              <h3 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "12px", color: "#1c1418" }}>Cobertura Nacional</h3>
-              <p style={{ color: "#897b80", lineHeight: 1.7, fontSize: "0.95rem" }}>Presente em 27 estados. Rede em constante expansão para cobrir todo o país.</p>
-            </div>
-
-            {/* Card 3 */}
-            <div className="p-10 bg-white border border-zinc-100 rounded-2xl hover:shadow-xl hover:border-red-100 transition-all duration-300">
-              <div style={{ width: "60px", height: "60px", background: "linear-gradient(135deg, #d71e3a, #ff3d5a)", borderRadius: "12px", display: "flex", alignItems: "center", justifyItems: "center", justifyContent: "center", marginBottom: "24px" }}>
-                <svg style={{ width: "32px", height: "32px", color: "white" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-              </div>
-              <h3 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "12px", color: "#1c1418" }}>Proteção Total</h3>
-              <p style={{ color: "#897b80", lineHeight: 1.7, fontSize: "0.95rem" }}>Conformidade LGPD. Dados criptografados e protegidos com os melhores padrões.</p>
-            </div>
-
-            {/* Card 4 */}
-            <div className="p-10 bg-white border border-zinc-100 rounded-2xl hover:shadow-xl hover:border-red-100 transition-all duration-300">
-              <div style={{ width: "60px", height: "60px", background: "linear-gradient(135deg, #d71e3a, #ff3d5a)", borderRadius: "12px", display: "flex", alignItems: "center", justifyItems: "center", justifyContent: "center", marginBottom: "24px" }}>
-                <svg style={{ width: "32px", height: "32px", color: "white" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg>
-              </div>
-              <h3 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "12px", color: "#1c1418" }}>Total Controle</h3>
-              <p style={{ color: "#897b80", lineHeight: 1.7, fontSize: "0.95rem" }}>Você decide tudo. Controle quando quer ser contatado e edite seu perfil a qualquer hora.</p>
-            </div>
-
-            {/* Card 5 */}
-            <div className="p-10 bg-white border border-zinc-100 rounded-2xl hover:shadow-xl hover:border-red-100 transition-all duration-300">
-              <div style={{ width: "60px", height: "60px", background: "linear-gradient(135deg, #d71e3a, #ff3d5a)", borderRadius: "12px", display: "flex", alignItems: "center", justifyItems: "center", justifyContent: "center", marginBottom: "24px" }}>
-                <svg style={{ width: "32px", height: "32px", color: "white" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 4l-8.5 17" /><path d="M10 19l4-11" /><path d="M2 5h20" /><path d="M5 2l-1 5h16l-1-5" /></svg>
-              </div>
-              <h3 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "12px", color: "#1c1418" }}>Impacto Real</h3>
-              <p style={{ color: "#897b80", lineHeight: 1.7, fontSize: "0.95rem" }}>Acompanhe o impacto das suas doações. Cada ação salva vidas verificáveis.</p>
-            </div>
-
-            {/* Card 6 */}
-            <div className="p-10 bg-white border border-zinc-100 rounded-2xl hover:shadow-xl hover:border-red-100 transition-all duration-300">
-              <div style={{ width: "60px", height: "60px", background: "linear-gradient(135deg, #d71e3a, #ff3d5a)", borderRadius: "12px", display: "flex", alignItems: "center", justifyItems: "center", justifyContent: "center", marginBottom: "24px" }}>
-                <svg style={{ width: "32px", height: "32px", color: "white" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2" /><line x1="12" y1="18" x2="12.01" y2="18" /></svg>
-              </div>
-              <h3 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "12px", color: "#1c1418" }}>Simples & Intuitivo</h3>
-              <p style={{ color: "#897b80", lineHeight: 1.7, fontSize: "0.95rem" }}>Cadastro em 60 segundos. Interface clean e amigável para qualquer pessoa.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ========================= HOW IT WORKS ========================= */}
-      <div style={{ padding: "100px 40px", background: "linear-gradient(to right, rgba(200, 30, 60, 0.04), transparent)" }}>
-        <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
-          <h2 style={{ textAlign: "center", fontSize: "2.8rem", fontFamily: "var(--font-display), sans-serif", marginBottom: "60px", color: "#1c1418", fontWeight: 800 }}>
-            Como Funciona?
-          </h2>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "30px", marginBottom: "60px" }}>
-            <div style={{ textAlign: "center" }}>
-              <div style={{ width: "80px", height: "80px", background: "linear-gradient(135deg, #d71e3a, #8b0000)", color: "white", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem", margin: "0 auto 20px", fontWeight: 700 }}>1</div>
-              <h4 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "10px" }}>Cadastro Rápido</h4>
-              <p style={{ color: "#897b80", lineHeight: 1.6, fontSize: "0.95rem" }}>Preencha seus dados essenciais: tipo sanguíneo, contato e localização.</p>
-            </div>
-
-            <div style={{ textAlign: "center" }}>
-              <div style={{ width: "80px", height: "80px", background: "linear-gradient(135deg, #d71e3a, #8b0000)", color: "white", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem", margin: "0 auto 20px", fontWeight: 700 }}>2</div>
-              <h4 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "10px" }}>Perfil Ativo</h4>
-              <p style={{ color: "#897b80", lineHeight: 1.6, fontSize: "0.95rem" }}>Sua informação integra nossa rede nacional de doadores.</p>
-            </div>
-
-            <div style={{ textAlign: "center" }}>
-              <div style={{ width: "80px", height: "80px", background: "linear-gradient(135deg, #d71e3a, #8b0000)", color: "white", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem", margin: "0 auto 20px", fontWeight: 700 }}>3</div>
-              <h4 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "10px" }}>Alerta Recebido</h4>
-              <p style={{ color: "#897b80", lineHeight: 1.6, fontSize: "0.95rem" }}>Quando há emergência compatível com seu tipo, recebe notificação.</p>
-            </div>
-
-            <div style={{ textAlign: "center" }}>
-              <div style={{ width: "80px", height: "80px", background: "linear-gradient(135deg, #d71e3a, #8b0000)", color: "white", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem", margin: "0 auto 20px", fontWeight: 700 }}>4</div>
-              <h4 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "10px" }}>Vida Salva</h4>
-              <p style={{ color: "#897b80", lineHeight: 1.6, fontSize: "0.95rem" }}>Você decide ajudar. Sua doação pode salvar até 4 vidas.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ========================= IMPACT SECTION ========================= */}
-      <div style={{ padding: "100px 40px", background: "white" }}>
-        <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
-          <h2 style={{ textAlign: "center", fontSize: "2.8rem", fontFamily: "var(--font-display), sans-serif", marginBottom: "60px", color: "#1c1418", fontWeight: 800 }}>
-            Impacto Social
-          </h2>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            {/* Lado Direito: Card Interativo de Impacto e Compatibilidade */}
             <div>
-              <h3 style={{ fontSize: "1.8rem", fontWeight: 700, marginBottom: "24px", color: "#1c1418" }}>
-                Uma Única Doação Salva Vidas
-              </h3>
-              <div style={{ marginBottom: "24px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-                  <svg style={{ width: "20px", height: "20px", color: "#d71e3a" }} viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10" /></svg>
-                  <h4 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#d71e3a" }}>1 Bolsa = 4 Vidas</h4>
-                </div>
-                <p style={{ color: "#897b80", lineHeight: 1.7 }}>O sangue é separado em componentes: hemácias, plaquetas e plasma. Cada um pode ajudar diferentes pacientes.</p>
-              </div>
-              <div style={{ marginBottom: "24px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-                  <svg style={{ width: "20px", height: "20px", color: "#d71e3a" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
-                  <h4 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#d71e3a" }}>Contra o Relógio</h4>
-                </div>
-                <p style={{ color: "#897b80", lineHeight: 1.7 }}>Emergências não esperam. Com HemoAlerta, encontramos doadores em minutos, não horas.</p>
-              </div>
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-                  <svg style={{ width: "20px", height: "20px", color: "#d71e3a" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" /></svg>
-                  <h4 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#d71e3a" }}>Cobertura Total</h4>
-                </div>
-                <p style={{ color: "#897b80", lineHeight: 1.7 }}>Hospitais, hemocentros e urgências em todo o país podem ativar nossa rede.</p>
-              </div>
-            </div>
+              <div
+                style={{
+                  background: "#ffffff",
+                  borderRadius: "24px",
+                  padding: "32px",
+                  border: "1px solid #e2e8f0",
+                  boxShadow: "0 20px 40px -15px rgba(0, 0, 0, 0.07), 0 0 0 1px rgba(0,0,0,0.02)",
+                  position: "relative",
+                }}
+              >
+                {/* Header do Card */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <div
+                      style={{
+                        width: "38px",
+                        height: "38px",
+                        borderRadius: "10px",
+                        background: "#fee2e2",
+                        display: "grid",
+                        placeItems: "center",
+                        color: "#e11d48",
+                      }}
+                    >
+                      <Activity size={20} />
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: "0.98rem", color: "#0f172a" }}>
+                        Rede Ativa HemoAlerta
+                      </div>
+                      <div style={{ fontSize: "0.78rem", color: "#64748b" }}>
+                        Dados em tempo real • SQLite integrado
+                      </div>
+                    </div>
+                  </div>
 
-            <div style={{ background: "linear-gradient(135deg, rgba(200,30,60,0.1), rgba(200,30,60,0.05))", padding: "50px", borderRadius: "24px", border: "1px solid rgba(28, 20, 24, 0.1)" }}>
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: "4.5rem", fontWeight: 900, color: "#d71e3a", fontFamily: "var(--font-display), sans-serif", marginBottom: "10px" }}>
-                  {stats.vidasSalvasEstimadas}
+                  <span
+                    style={{
+                      background: "#dcfce7",
+                      color: "#15803d",
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      padding: "4px 10px",
+                      borderRadius: "999px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                    }}
+                  >
+                    <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#22c55e" }} />
+                    Online
+                  </span>
                 </div>
-                <p style={{ color: "#897b80", fontSize: "1.15rem", fontWeight: 600 }}>Vidas potencialmente salvas com nossa rede</p>
-                <hr style={{ border: "none", borderTop: "2px solid rgba(28, 20, 24, 0.1)", margin: "30px 0" }} />
-                <p style={{ color: "#897b80", fontSize: "0.95rem", lineHeight: 1.6 }}>
-                  Cada novo doador aumenta a chance de salvar vidas em emergências. Seja parte dessa rede de solidariedade.
-                </p>
+
+                {/* Grid dos Tipos Sanguíneos */}
+                <div style={{ marginBottom: "24px" }}>
+                  <div style={{ fontSize: "0.85rem", fontWeight: 600, color: "#334155", marginBottom: "10px" }}>
+                    Selecione o tipo sanguíneo para ver o impacto:
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "8px" }}>
+                    {bloodTypes.map((b) => (
+                      <div
+                        key={b.type}
+                        style={{
+                          background: b.type === "O-" ? "linear-gradient(135deg, #e11d48, #be123c)" : "#f8fafc",
+                          color: b.type === "O-" ? "#fff" : "#1e293b",
+                          border: b.type === "O-" ? "none" : "1px solid #e2e8f0",
+                          borderRadius: "12px",
+                          padding: "10px 6px",
+                          textAlign: "center",
+                          cursor: "default",
+                          boxShadow: b.type === "O-" ? "0 4px 12px rgba(225, 29, 72, 0.25)" : "none",
+                        }}
+                      >
+                        <div style={{ fontSize: "1.15rem", fontWeight: 800 }}>{b.type}</div>
+                        <div style={{ fontSize: "0.68rem", opacity: 0.9, marginTop: "2px" }}>
+                          {b.type === "O-" ? "Universal" : "Disponível"}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Destaque do Doador Universal O- */}
+                <div
+                  style={{
+                    background: "#fff1f2",
+                    borderRadius: "14px",
+                    padding: "16px",
+                    border: "1px solid #fecdd3",
+                    marginBottom: "20px",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
+                    <Droplet size={20} color="#e11d48" style={{ flexShrink: 0, marginTop: "2px" }} />
+                    <div style={{ fontSize: "0.85rem", color: "#9f1239", lineHeight: 1.5 }}>
+                      <strong>Doador O- Negativo</strong> é a reserva de ouro dos hospitais em casos de emergência extrema, pois qualquer pessoa pode receber seu sangue sem testes prévios demorados.
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mini Estatísticas Rápidas */}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "12px",
+                    paddingTop: "16px",
+                    borderTop: "1px solid #f1f5f9",
+                  }}
+                >
+                  <div style={{ background: "#f8fafc", borderRadius: "10px", padding: "12px", textAlign: "center" }}>
+                    <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "#e11d48" }}>
+                      {stats.totalDoadores}
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: 600 }}>
+                      Doadores Ativos
+                    </div>
+                  </div>
+                  <div style={{ background: "#f8fafc", borderRadius: "10px", padding: "12px", textAlign: "center" }}>
+                    <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "#e11d48" }}>
+                      {stats.vidasSalvasEstimadas}
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: 600 }}>
+                      Vidas Salvas
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* ========================= TESTIMONIALS ========================= */}
-      <div style={{ padding: "100px 40px", background: "linear-gradient(to right, rgba(200, 30, 60, 0.04), transparent)" }}>
-        <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
-          <h2 style={{ textAlign: "center", fontSize: "2.8rem", fontFamily: "var(--font-display), sans-serif", marginBottom: "60px", color: "#1c1418", fontWeight: 800 }}>
-            Histórias que Transformam
-          </h2>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "40px" }}>
-            <div style={{ padding: "40px", background: "white", borderRadius: "16px", border: "1px solid rgba(28, 20, 24, 0.1)" }}>
-              <div style={{ display: "flex", gap: "4px", color: "#d71e3a", marginBottom: "16px" }}>
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={18} fill="#d71e3a" color="#d71e3a" />
-                ))}
-              </div>
-              <p style={{ color: "#1c1418", marginBottom: "24px", lineHeight: 1.7 }}>
-                &ldquo;Meu filho precisava urgentemente de sangue. HemoAlerta nos ajudou a encontrar doadores em 20 minutos. Salvou a vida dele.&rdquo;
-              </p>
-              <p style={{ fontWeight: 700, color: "#1c1418" }}>Marina Silva</p>
-              <p style={{ color: "#897b80", fontSize: "0.9rem" }}>São Paulo, SP</p>
-            </div>
-
-            <div style={{ padding: "40px", background: "white", borderRadius: "16px", border: "1px solid rgba(28, 20, 24, 0.1)" }}>
-              <div style={{ display: "flex", gap: "4px", color: "#d71e3a", marginBottom: "16px" }}>
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={18} fill="#d71e3a" color="#d71e3a" />
-                ))}
-              </div>
-              <p style={{ color: "#1c1418", marginBottom: "24px", lineHeight: 1.7 }}>
-                &ldquo;Como doador, fiquei surpreso com o impacto direto. Saber que minha doação salvou 4 vidas é transformador.&rdquo;
-              </p>
-              <p style={{ fontWeight: 700, color: "#1c1418" }}>Carlos Mendes</p>
-              <p style={{ color: "#897b80", fontSize: "0.9rem" }}>Rio de Janeiro, RJ</p>
-            </div>
-
-            <div style={{ padding: "40px", background: "white", borderRadius: "16px", border: "1px solid rgba(28, 20, 24, 0.1)" }}>
-              <div style={{ display: "flex", gap: "4px", color: "#d71e3a", marginBottom: "16px" }}>
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={18} fill="#d71e3a" color="#d71e3a" />
-                ))}
-              </div>
-              <p style={{ color: "#1c1418", marginBottom: "24px", lineHeight: 1.7 }}>
-                &ldquo;A plataforma é segura e tranquila. Recomendo para todos que querem ajudar sem burocracias.&rdquo;
-              </p>
-              <p style={{ fontWeight: 700, color: "#1c1418" }}>Ana Tavares</p>
-              <p style={{ color: "#897b80", fontSize: "0.9rem" }}>Belo Horizonte, MG</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ========================= FAQ SECTION ========================= */}
-      <div style={{ padding: "100px 40px", background: "white" }}>
-        <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
-          <h2 style={{ textAlign: "center", fontSize: "2.8rem", fontFamily: "var(--font-display), sans-serif", marginBottom: "60px", color: "#1c1418", fontWeight: 800 }}>
-            Perguntas Frequentes
-          </h2>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-            <details style={{ padding: "24px", background: "white", border: "1px solid rgba(28, 20, 24, 0.1)", borderRadius: "12px", cursor: "pointer" }}>
-              <summary style={{ fontWeight: 700, color: "#1c1418", fontSize: "1.1rem", display: "flex", alignItems: "center", gap: "12px" }}>
-                <svg style={{ width: "20px", height: "20px", color: "#d71e3a" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
-                Preciso de alguma documentação especial?
-              </summary>
-              <p style={{ color: "#897b80", marginTop: "16px", lineHeight: 1.7 }}>Não. Apenas seus dados básicos (nome, tipo sanguíneo, contato e localização) são necessários. Tudo é seguro e criptografado.</p>
-            </details>
-
-            <details style={{ padding: "24px", background: "white", border: "1px solid rgba(28, 20, 24, 0.1)", borderRadius: "12px", cursor: "pointer" }}>
-              <summary style={{ fontWeight: 700, color: "#1c1418", fontSize: "1.1rem", display: "flex", alignItems: "center", gap: "12px" }}>
-                <svg style={{ width: "20px", height: "20px", color: "#d71e3a" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="1" /><circle cx="19" cy="4" r="1" /><circle cx="5" cy="20" r="1" /><path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m5.08 5.08l4.24 4.24M1 12h6m6 0h6" /></svg>
-                Tem algum custo?
-              </summary>
-              <p style={{ color: "#897b80", marginTop: "16px", lineHeight: 1.7 }}>Não. HemoAlerta é 100% gratuito para doadores. É um serviço voluntário sem fins lucrativos.</p>
-            </details>
-
-            <details style={{ padding: "24px", background: "white", border: "1px solid rgba(28, 20, 24, 0.1)", borderRadius: "12px", cursor: "pointer" }}>
-              <summary style={{ fontWeight: 700, color: "#1c1418", fontSize: "1.1rem", display: "flex", alignItems: "center", gap: "12px" }}>
-                <svg style={{ width: "20px", height: "20px", color: "#d71e3a" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
-                Tenho que responder a todos os alertas?
-              </summary>
-              <p style={{ color: "#897b80", marginTop: "16px", lineHeight: 1.7 }}>Não. Você escolhe. Pode ignorar alertas sem problema. Não há obrigações ou consequências.</p>
-            </details>
-
-            <details style={{ padding: "24px", background: "white", border: "1px solid rgba(28, 20, 24, 0.1)", borderRadius: "12px", cursor: "pointer" }}>
-              <summary style={{ fontWeight: 700, color: "#1c1418", fontSize: "1.1rem", display: "flex", alignItems: "center", gap: "12px" }}>
-                <svg style={{ width: "20px", height: "20px", color: "#d71e3a" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-                Meus dados estão seguros?
-              </summary>
-              <p style={{ color: "#897b80", marginTop: "16px", lineHeight: 1.7 }}>Sim. Somos conformes com LGPD. Seus dados são criptografados e você controla quem pode acessá-los.</p>
-            </details>
-
-            <details style={{ padding: "24px", background: "white", border: "1px solid rgba(28, 20, 24, 0.1)", borderRadius: "12px", cursor: "pointer" }}>
-              <summary style={{ fontWeight: 700, color: "#1c1418", fontSize: "1.1rem", display: "flex", alignItems: "center", gap: "12px" }}>
-                <svg style={{ width: "20px", height: "20px", color: "#d71e3a" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
-                Como funciona o contato?
-              </summary>
-              <p style={{ color: "#897b80", marginTop: "16px", lineHeight: 1.7 }}>Via WhatsApp. Quando há uma emergência compatível, você recebe uma mensagem com os detalhes e pode responder.</p>
-            </details>
-
-            <details style={{ padding: "24px", background: "white", border: "1px solid rgba(28, 20, 24, 0.1)", borderRadius: "12px", cursor: "pointer" }}>
-              <summary style={{ fontWeight: 700, color: "#1c1418", fontSize: "1.1rem", display: "flex", alignItems: "center", gap: "12px" }}>
-                <svg style={{ width: "20px", height: "20px", color: "#d71e3a" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
-                Posso editar meu perfil depois?
-              </summary>
-              <p style={{ color: "#897b80", marginTop: "16px", lineHeight: 1.7 }}>Sim. Acesse a aba &ldquo;Meu Perfil&rdquo; com email e telefone para atualizar qualquer informação a qualquer momento.</p>
-            </details>
-          </div>
-        </div>
-      </div>
-
-      {/* ========================= FINAL CTA ========================= */}
-      <div
+      {/* ========================= MÉTRICAS CONSOLIDADAS ========================= */}
+      <section
         style={{
-          background: "linear-gradient(135deg, #d71e3a 0%, #8b0000 100%)",
-          color: "white",
-          padding: "120px 40px",
-          textAlign: "center",
+          maxWidth: "1200px",
+          margin: "-40px auto 60px",
+          padding: "0 20px",
           position: "relative",
-          overflow: "hidden",
+          zIndex: 10,
         }}
       >
         <div
           style={{
-            position: "absolute",
-            top: "-100px",
-            right: "-100px",
-            width: "400px",
-            height: "400px",
-            background: "rgba(255,255,255,0.1)",
-            borderRadius: "50%",
-            filter: "blur(40px)",
+            background: "#ffffff",
+            borderRadius: "20px",
+            padding: "32px 28px",
+            border: "1px solid #e2e8f0",
+            boxShadow: "0 12px 30px rgba(0, 0, 0, 0.06)",
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            gap: "24px",
           }}
-        ></div>
-        <div
-          style={{
-            position: "absolute",
-            bottom: "-50px",
-            left: "-50px",
-            width: "300px",
-            height: "300px",
-            background: "rgba(255,255,255,0.08)",
-            borderRadius: "50%",
-            filter: "blur(30px)",
-          }}
-        ></div>
+        >
+          <div style={{ textAlign: "center", borderRight: "1px solid #f1f5f9" }}>
+            <div style={{ fontSize: "2.5rem", fontWeight: 900, color: "#be123c", fontFamily: "var(--font-display)" }}>
+              {stats.totalDoadores}
+            </div>
+            <div style={{ color: "#475569", fontWeight: 600, fontSize: "0.9rem", marginTop: "4px" }}>
+              Doadores Cadastrados
+            </div>
+          </div>
 
-        <div style={{ maxWidth: "900px", margin: "0 auto", position: "relative", zIndex: 1 }}>
-          <h2 style={{ fontSize: "clamp(2.5rem, 5vw, 4rem)", fontFamily: "var(--font-display), sans-serif", marginBottom: "24px", fontWeight: 900, lineHeight: 1.1 }}>
-            Pronto para <span style={{ color: "#ff3d5a" }}>salvar vidas</span>?
-          </h2>
-          <p style={{ fontSize: "1.3rem", opacity: 0.95, marginBottom: "60px", lineHeight: 1.8, fontWeight: 300 }}>
-            Junte-se a uma rede nacional de doadores voluntários. Seu cadastro leva apenas 60 segundos e pode salvar até 4 vidas.
-          </p>
-          <Link
-            href="/cadastro"
+          <div style={{ textAlign: "center", borderRight: "1px solid #f1f5f9" }}>
+            <div style={{ fontSize: "2.5rem", fontWeight: 900, color: "#be123c", fontFamily: "var(--font-display)" }}>
+              {stats.doadoresAtivos}
+            </div>
+            <div style={{ color: "#475569", fontWeight: 600, fontSize: "0.9rem", marginTop: "4px" }}>
+              Alertas WhatsApp Ativos
+            </div>
+          </div>
+
+          <div style={{ textAlign: "center", borderRight: "1px solid #f1f5f9" }}>
+            <div style={{ fontSize: "2.5rem", fontWeight: 900, color: "#be123c", fontFamily: "var(--font-display)" }}>
+              {stats.estadosAtivos} <span style={{ fontSize: "1.2rem", fontWeight: 600, opacity: 0.7 }}>/ 27</span>
+            </div>
+            <div style={{ color: "#475569", fontWeight: 600, fontSize: "0.9rem", marginTop: "4px" }}>
+              Estados Cobertos
+            </div>
+          </div>
+
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: "2.5rem", fontWeight: 900, color: "#be123c", fontFamily: "var(--font-display)" }}>
+              {stats.vidasSalvasEstimadas}
+            </div>
+            <div style={{ color: "#475569", fontWeight: 600, fontSize: "0.9rem", marginTop: "4px" }}>
+              Vidas Salvas (Estimadas)
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ========================= COMO FUNCIONA ========================= */}
+      <section style={{ maxWidth: "1200px", margin: "0 auto 80px", padding: "0 20px" }}>
+        <div style={{ textAlign: "center", marginBottom: "48px" }}>
+          <span
             style={{
-              background: "#ff3d5a",
-              color: "white",
-              border: "none",
-              padding: "20px 70px",
-              fontSize: "1.15rem",
+              fontSize: "0.85rem",
               fontWeight: 700,
-              borderRadius: "8px",
-              cursor: "pointer",
-              fontFamily: "var(--font-display), sans-serif",
-              transition: "all 0.3s ease",
-              boxShadow: "0 12px 40px rgba(255, 61, 90, 0.4)",
+              color: "#be123c",
               textTransform: "uppercase",
-              letterSpacing: "0.5px",
-              display: "inline-block",
-              textDecoration: "none",
+              letterSpacing: "1px",
             }}
-            className="hover:scale-105"
           >
-            Cadastrar Agora
-          </Link>
-          <p style={{ marginTop: "40px", opacity: 0.85, fontSize: "0.95rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-            <CheckCircle2 size={18} color="#42b881" />
-            <span>100% seguro e voluntário • Sem compromissos</span>
+            Fluxo Ágil & Seguro
+          </span>
+          <h2
+            style={{
+              fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)",
+              fontWeight: 800,
+              fontFamily: "var(--font-display)",
+              color: "#0f172a",
+              marginTop: "8px",
+            }}
+          >
+            Como o HemoAlerta funciona na prática
+          </h2>
+          <p style={{ color: "#64748b", fontSize: "1.05rem", maxWidth: "600px", margin: "12px auto 0" }}>
+            Três etapas simples entre a solicitação hospitalar e a vida salva.
           </p>
         </div>
-      </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "28px" }}>
+          {/* Passo 1 */}
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: "18px",
+              padding: "32px 26px",
+              border: "1px solid #e2e8f0",
+              boxShadow: "0 4px 15px rgba(0,0,0,0.03)",
+              position: "relative",
+            }}
+          >
+            <div
+              style={{
+                width: "48px",
+                height: "48px",
+                borderRadius: "14px",
+                background: "#fee2e2",
+                color: "#be123c",
+                display: "grid",
+                placeItems: "center",
+                fontWeight: 800,
+                fontSize: "1.2rem",
+                marginBottom: "20px",
+              }}
+            >
+              01
+            </div>
+            <h3 style={{ fontSize: "1.2rem", fontWeight: 700, color: "#0f172a", marginBottom: "10px" }}>
+              Você se cadastra
+            </h3>
+            <p style={{ color: "#64748b", fontSize: "0.95rem", lineHeight: 1.6 }}>
+              Informa seu tipo sanguíneo, cidade e WhatsApp em menos de 1 minuto. Seus dados são protegidos por criptografia e LGPD.
+            </p>
+          </div>
+
+          {/* Passo 2 */}
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: "18px",
+              padding: "32px 26px",
+              border: "1px solid #e2e8f0",
+              boxShadow: "0 4px 15px rgba(0,0,0,0.03)",
+              position: "relative",
+            }}
+          >
+            <div
+              style={{
+                width: "48px",
+                height: "48px",
+                borderRadius: "14px",
+                background: "#fee2e2",
+                color: "#be123c",
+                display: "grid",
+                placeItems: "center",
+                fontWeight: 800,
+                fontSize: "1.2rem",
+                marginBottom: "20px",
+              }}
+            >
+              02
+            </div>
+            <h3 style={{ fontSize: "1.2rem", fontWeight: 700, color: "#0f172a", marginBottom: "10px" }}>
+              Hospitais acionam SOS
+            </h3>
+            <p style={{ color: "#64748b", fontSize: "0.95rem", lineHeight: 1.6 }}>
+              Quando um paciente precisa de sangue urgente, o hospital cadastra a emergência. O algoritmo cruza tipos compatíveis e localização.
+            </p>
+          </div>
+
+          {/* Passo 3 */}
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: "18px",
+              padding: "32px 26px",
+              border: "1px solid #e2e8f0",
+              boxShadow: "0 4px 15px rgba(0,0,0,0.03)",
+              position: "relative",
+            }}
+          >
+            <div
+              style={{
+                width: "48px",
+                height: "48px",
+                borderRadius: "14px",
+                background: "#fee2e2",
+                color: "#be123c",
+                display: "grid",
+                placeItems: "center",
+                fontWeight: 800,
+                fontSize: "1.2rem",
+                marginBottom: "20px",
+              }}
+            >
+              03
+            </div>
+            <h3 style={{ fontSize: "1.2rem", fontWeight: 700, color: "#0f172a", marginBottom: "10px" }}>
+              Alerta no seu WhatsApp
+            </h3>
+            <p style={{ color: "#64748b", fontSize: "0.95rem", lineHeight: 1.6 }}>
+              Você recebe uma mensagem oficial informando onde e quando doar. Você só doa se puder e tiver disponibilidade.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ========================= CRITÉRIOS DE DOAÇÃO ========================= */}
+      <section style={{ background: "#ffffff", padding: "80px 20px", borderTop: "1px solid #e2e8f0", borderBottom: "1px solid #e2e8f0" }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+              gap: "48px",
+              alignItems: "center",
+            }}
+          >
+            <div>
+              <span
+                style={{
+                  fontSize: "0.85rem",
+                  fontWeight: 700,
+                  color: "#be123c",
+                  textTransform: "uppercase",
+                  letterSpacing: "1px",
+                }}
+              >
+                Requisitos Oficiais
+              </span>
+              <h2
+                style={{
+                  fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)",
+                  fontWeight: 800,
+                  fontFamily: "var(--font-display)",
+                  color: "#0f172a",
+                  marginTop: "8px",
+                  marginBottom: "18px",
+                }}
+              >
+                Quem pode ser um doador de sangue?
+              </h2>
+              <p style={{ color: "#64748b", fontSize: "1.05rem", lineHeight: 1.6, marginBottom: "28px" }}>
+                Doar sangue é um processo seguro e indolor. Confira os requisitos básicos estabelecidos pelo Ministério da Saúde:
+              </p>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                {[
+                  "Ter entre 16 e 69 anos de idade (menores de 18 com autorização)",
+                  "Pesar no mínimo 50 kg em boas condições gerais de saúde",
+                  "Estar descansado (ter dormido pelo menos 6 horas nas últimas 24h)",
+                  "Estar alimentado (evitar alimentos gordurosos 4 horas antes)",
+                  "Apresentar documento original com foto emitido por órgão oficial",
+                ].map((item, index) => (
+                  <div key={index} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <div
+                      style={{
+                        width: "24px",
+                        height: "24px",
+                        borderRadius: "50%",
+                        background: "#dcfce7",
+                        display: "grid",
+                        placeItems: "center",
+                        color: "#16a34a",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <CheckCircle2 size={16} />
+                    </div>
+                    <span style={{ fontSize: "0.95rem", color: "#334155", fontWeight: 500 }}>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: "linear-gradient(135deg, #1e293b, #0f172a)",
+                borderRadius: "24px",
+                padding: "36px",
+                color: "#ffffff",
+                boxShadow: "0 20px 40px rgba(15, 23, 42, 0.12)",
+              }}
+            >
+              <h3 style={{ fontSize: "1.4rem", fontWeight: 700, marginBottom: "14px", color: "#fecdd3" }}>
+                Por que a sua doação importa tanto?
+              </h3>
+              <p style={{ color: "#cbd5e1", lineHeight: 1.65, fontSize: "0.95rem", marginBottom: "24px" }}>
+                O sangue humano não pode ser fabricado artificialmente. Nos momentos de cirurgias, acidentes e tratamentos contra o câncer, a única esperança de quem precisa é a solidariedade de pessoas como você.
+              </p>
+
+              <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "20px" }}>
+                <Link
+                  href="/cadastro"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    background: "#e11d48",
+                    color: "#fff",
+                    padding: "12px 24px",
+                    borderRadius: "8px",
+                    fontWeight: 700,
+                    fontSize: "0.92rem",
+                    textDecoration: "none",
+                  }}
+                >
+                  <span>Cadastre-se Agora Gratuitamente</span>
+                  <ArrowRight size={16} />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ========================= CTA FINAL IMPACTANTE ========================= */}
+      <section style={{ maxWidth: "1200px", margin: "80px auto", padding: "0 20px" }}>
+        <div
+          style={{
+            background: "linear-gradient(135deg, #be123c 0%, #881337 100%)",
+            borderRadius: "28px",
+            padding: "clamp(40px, 6vw, 64px) clamp(24px, 5vw, 48px)",
+            textAlign: "center",
+            color: "#ffffff",
+            boxShadow: "0 20px 50px rgba(190, 18, 60, 0.28)",
+          }}
+        >
+          <h2
+            style={{
+              fontSize: "clamp(2rem, 4vw, 3rem)",
+              fontWeight: 800,
+              fontFamily: "var(--font-display)",
+              marginBottom: "16px",
+              lineHeight: 1.15,
+            }}
+          >
+            Faça parte da maior rede de solidariedade do Brasil
+          </h2>
+          <p
+            style={{
+              fontSize: "1.1rem",
+              opacity: 0.9,
+              maxWidth: "640px",
+              margin: "0 auto 32px",
+              lineHeight: 1.6,
+            }}
+          >
+            Cadastre-se em 60 segundos e esteja pronto para salvar vidas quando um hospital da sua cidade precisar.
+          </p>
+
+          <div style={{ display: "flex", gap: "16px", justifyContent: "center", flexWrap: "wrap" }}>
+            <Link
+              href="/cadastro"
+              style={{
+                background: "#ffffff",
+                color: "#be123c",
+                padding: "16px 36px",
+                borderRadius: "10px",
+                fontWeight: 800,
+                fontSize: "1.05rem",
+                textDecoration: "none",
+                boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+              <Heart size={18} fill="#be123c" />
+              <span>Quero Salvar Vidas</span>
+            </Link>
+
+            <Link
+              href="/rede"
+              style={{
+                background: "rgba(255, 255, 255, 0.15)",
+                color: "#ffffff",
+                border: "1.5px solid rgba(255,255,255,0.4)",
+                padding: "16px 28px",
+                borderRadius: "10px",
+                fontWeight: 700,
+                fontSize: "1.05rem",
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+              <span>Ver Mapa da Rede</span>
+            </Link>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

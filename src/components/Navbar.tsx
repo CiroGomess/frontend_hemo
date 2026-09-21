@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { fetchStats } from "@/services/api";
-import { Siren } from "lucide-react";
+import { Siren, Shield } from "lucide-react";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -66,6 +66,10 @@ export default function Navbar() {
         </Link>
         <Link href="/perfil" className={`tab ${pathname === "/perfil" ? "is-active" : ""}`}>
           Meu Perfil
+        </Link>
+        <Link href="/admin" className={`tab ${pathname === "/admin" ? "is-active" : ""}`} style={{ color: "#d71e3a", fontWeight: 700 }}>
+          <Shield size={15} style={{ marginRight: "4px", verticalAlign: "middle" }} />
+          ADM
         </Link>
         <Link href="/emergencia" className="tab-sos">
           <Siren size={16} />
