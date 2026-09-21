@@ -10,155 +10,193 @@ const UFS = [
 
 export default function HemocentrosPage() {
   const [hemocentros, setHemocentros] = useState<Hemocentro[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [estadoFilter, setEstadoFilter] = useState("");
-  const [tipoFilter, setTipoFilter] = useState("");
-  const [searchCidade, setSearchCidade] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [estado, setEstado] = useState("");
+  const [tipo, setTipo] = useState("");
 
-  const loadHemocentros = () => {
+  const handleSearch = () => {
     setLoading(true);
+    setHasSearched(true);
     fetchHemocentros({
-      estado: estadoFilter || undefined,
-      tipo: tipoFilter || undefined,
-      cidade: searchCidade || undefined,
+      estado: estado || undefined,
+      tipo: tipo || undefined,
     })
       .then((data) => setHemocentros(data))
-      .catch((err) => console.error("Erro ao carregar hemocentros:", err))
+      .catch((err) => console.error("Erro ao buscar hemocentros:", err))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => {
-    loadHemocentros();
-  }, [estadoFilter, tipoFilter]);
+    handleSearch();
+  }, [estado, tipo]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div className="text-center max-w-3xl mx-auto mb-10">
-        <span className="text-3xl">🏥</span>
-        <h1 className="text-3xl sm:text-4xl font-black text-zinc-900 mt-2">
-          Guia de Hemocentros e Postos de Coleta
+    <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "40px 20px" }}>
+      {/* HEADER */}
+      <div style={{ marginBottom: "50px" }}>
+        <h1 style={{ fontSize: "2.5rem", fontWeight: 900, color: "var(--ink)", margin: "0 0 12px", fontFamily: "var(--font-display)" }}>
+          Encontre Hemocentros Próximos
         </h1>
-        <p className="mt-3 text-zinc-600 text-base">
-          Encontre onde doar sangue com segurança perto de você.
+        <p style={{ fontSize: "1.1rem", color: "var(--muted)", margin: 0, maxWidth: "600px", lineHeight: 1.6 }}>
+          Localize hemocentros, hospitais, clínicas e postos de doação de sangue próximos a você. Acesse informações de contato, horários e serviços disponíveis.
         </p>
       </div>
 
-      {/* Controles de Filtro */}
-      <div className="bg-white p-6 rounded-3xl border border-rose-100 shadow-sm mb-8">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* CONTROLES - LAYOUT PREMIUM IDENTICO AO HTML */}
+      <div
+        style={{
+          background: "white",
+          border: "1px solid var(--line)",
+          borderRadius: "16px",
+          padding: "32px",
+          marginBottom: "40px",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.04)",
+        }}
+      >
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "24px", alignItems: "end" }}>
+          {/* ESTADO */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
-              Estado (UF)
+            <label style={{ display: "block", marginBottom: "12px", color: "var(--ink)", fontWeight: 700, fontSize: "0.95rem" }}>
+              🗺️ Estado
             </label>
-            <select
-              value={estadoFilter}
-              onChange={(e) => setEstadoFilter(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 focus:border-red-500 outline-none text-zinc-800 font-medium"
-            >
-              <option value="">Todos os Estados</option>
-              {UFS.map((uf) => (
-                <option key={uf} value={uf}>
-                  {uf}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
-              Tipo de Unidade
-            </label>
-            <select
-              value={tipoFilter}
-              onChange={(e) => setTipoFilter(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 focus:border-red-500 outline-none text-zinc-800 font-medium"
-            >
-              <option value="">Todos os Tipos</option>
-              <option value="hemocentro">Hemocentros Regionais</option>
-              <option value="hospital">Hospitais com Coleta</option>
-              <option value="clinica">Clínicas e Bancos Privados</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
-              Buscar por Cidade
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={searchCidade}
-                onChange={(e) => setSearchCidade(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && loadHemocentros()}
-                placeholder="Ex: Campinas"
-                className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 focus:border-red-500 outline-none text-zinc-800"
-              />
-              <button
-                onClick={loadHemocentros}
-                className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm transition"
+            <div className="select-wrap">
+              <select
+                id="estadoFilter"
+                value={estado}
+                onChange={(e) => setEstado(e.target.value)}
+                style={{ width: "100%", padding: "12px 14px", border: "1.5px solid var(--line)", borderRadius: "8px", fontSize: "0.95rem", background: "white", color: "var(--ink)", cursor: "pointer", fontWeight: 500 }}
               >
-                Buscar
-              </button>
+                <option value="">Todos os estados</option>
+                {UFS.map((uf) => (
+                  <option key={uf} value={uf}>{uf}</option>
+                ))}
+              </select>
             </div>
           </div>
+
+          {/* TIPO */}
+          <div>
+            <label style={{ display: "block", marginBottom: "12px", color: "var(--ink)", fontWeight: 700, fontSize: "0.95rem" }}>
+              🏥 Tipo
+            </label>
+            <div className="select-wrap">
+              <select
+                id="tipoFilter"
+                value={tipo}
+                onChange={(e) => setTipo(e.target.value)}
+                style={{ width: "100%", padding: "12px 14px", border: "1.5px solid var(--line)", borderRadius: "8px", fontSize: "0.95rem", background: "white", color: "var(--ink)", cursor: "pointer", fontWeight: 500 }}
+              >
+                <option value="">Todos</option>
+                <option value="hemocentro">Hemocentros</option>
+                <option value="hospital">Hospitais</option>
+                <option value="clinica">Clínicas</option>
+              </select>
+            </div>
+          </div>
+
+          {/* BOTÃO */}
+          <button
+            id="btnLocalizarHemo"
+            onClick={handleSearch}
+            className="btn btn--primary"
+            style={{
+              padding: "14px 40px",
+              borderRadius: "8px",
+              fontWeight: 700,
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+              fontSize: "1rem",
+              height: "fit-content",
+              justifyContent: "center",
+            }}
+          >
+            🔍 Buscar
+          </button>
         </div>
       </div>
 
-      {/* Lista de Hemocentros */}
+      {/* RESULTADOS GRID */}
       {loading ? (
-        <div className="text-center py-16 text-zinc-500">Carregando postos de coleta...</div>
+        <div style={{ textAlign: "center", padding: "80px 20px" }}>
+          <p style={{ color: "var(--muted)", fontSize: "1.1rem" }}>Buscando hemocentros...</p>
+        </div>
       ) : hemocentros.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-3xl border border-zinc-200 text-zinc-500">
-          Nenhum hemocentro encontrado com os filtros selecionados.
+        <div style={{ textAlign: "center", padding: "100px 20px" }}>
+          <div style={{ fontSize: "4rem", marginBottom: "20px" }}>🏥</div>
+          <p style={{ color: "var(--muted)", fontSize: "1.2rem", margin: "0 auto", maxWidth: "500px", lineHeight: 1.6 }}>
+            Nenhum estabelecimento encontrado para os filtros selecionados.
+          </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "24px" }}>
           {hemocentros.map((item) => (
             <div
               key={item.id}
-              className="bg-white rounded-2xl border border-rose-100 p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between"
+              style={{
+                background: "white",
+                border: "1px solid var(--line)",
+                borderRadius: "16px",
+                padding: "24px",
+                boxShadow: "0 4px 16px rgba(0,0,0,0.06)",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+              }}
             >
               <div>
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-red-50 text-red-700 border border-red-200 uppercase">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+                  <span
+                    style={{
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      padding: "4px 10px",
+                      borderRadius: "999px",
+                      background: "rgba(200, 30, 60, 0.1)",
+                      color: "var(--blood-dark)",
+                    }}
+                  >
                     {item.tipo}
                   </span>
-                  <span className="text-sm font-extrabold text-zinc-400">
+                  <span style={{ fontWeight: 800, color: "var(--muted)", fontSize: "0.9rem" }}>
                     {item.estado}
                   </span>
                 </div>
 
-                <h3 className="font-bold text-lg text-zinc-900 leading-snug mb-2">
+                <h3 style={{ fontSize: "1.2rem", fontWeight: 700, color: "var(--ink)", marginBottom: "12px", lineHeight: 1.3 }}>
                   {item.nome}
                 </h3>
 
-                <p className="text-sm text-zinc-600 mb-2 flex items-start gap-2">
-                  <span>📍</span> {item.endereco}, {item.cidade} - {item.estado}
+                <p style={{ color: "var(--muted)", fontSize: "0.9rem", marginBottom: "10px", lineHeight: 1.5 }}>
+                  📍 {item.endereco}, {item.cidade} - {item.estado}
                 </p>
 
-                <p className="text-sm text-zinc-600 mb-2 flex items-center gap-2">
-                  <span>📞</span> {item.telefone}
+                <p style={{ color: "var(--muted)", fontSize: "0.9rem", marginBottom: "10px" }}>
+                  📞 {item.telefone}
                 </p>
 
-                <p className="text-xs text-zinc-500 flex items-center gap-2">
-                  <span>🕒</span> {item.horario}
+                <p style={{ color: "var(--muted)", fontSize: "0.85rem", marginBottom: "16px" }}>
+                  🕒 {item.horario}
                 </p>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-zinc-100 flex gap-2">
+              <div style={{ display: "flex", gap: "10px", marginTop: "16px", paddingTop: "16px", borderTop: "1px solid var(--line-2)" }}>
                 <a
                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
                     `${item.nome} ${item.cidade} ${item.estado}`
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-bold text-center transition flex items-center justify-center gap-1.5"
+                  className="btn btn--ghost"
+                  style={{ flex: 1, justifyContent: "center", fontSize: "0.85rem", padding: "10px" }}
                 >
-                  <span>🗺️</span> Rota Maps
+                  🗺️ Rota Maps
                 </a>
                 <a
                   href={`tel:${item.telefone.replace(/\D/g, "")}`}
-                  className="px-4 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold transition flex items-center justify-center gap-1"
+                  className="btn btn--primary"
+                  style={{ fontSize: "0.85rem", padding: "10px 16px" }}
                 >
                   Ligar
                 </a>

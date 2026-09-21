@@ -12,24 +12,48 @@ const UFS = [
 export default function PerfilPage() {
   const [donor, setDonor] = useState<Donor | null>(null);
   const [email, setEmail] = useState("");
-  const [whatsapp, setWhatsapp] = useState("");
+  const [telefone, setTelefone] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const handlePhoneInput = (val: string) => {
+    const digits = val.replace(/\D/g, "").slice(0, 11);
+    let out = "";
+    if (digits.length > 0) out = "(" + digits.slice(0, 2);
+    if (digits.length >= 2) out += ") ";
+    if (digits.length > 2) {
+      const rest = digits.slice(2);
+      if (rest.length <= 4) out += rest;
+      else if (rest.length <= 8) out += rest.slice(0, 4) + "-" + rest.slice(4);
+      else out += rest.slice(0, 5) + "-" + rest.slice(5);
+    }
+    return out;
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
-    setLoading(true);
 
+    if (!email || !email.includes("@")) {
+      setError("E-mail inválido");
+      return;
+    }
+    const cleanPhone = telefone.replace(/\D/g, "");
+    if (!cleanPhone || cleanPhone.length < 10) {
+      setError("Telefone inválido");
+      return;
+    }
+
+    setLoading(true);
     try {
-      const data = await loginDonor(email, whatsapp);
+      const data = await loginDonor(email, telefone);
       setDonor(data);
-      setSuccess("Dados carregados com sucesso!");
+      setSuccess(`✓ Bem-vindo, ${data.nomeCompleto}!`);
     } catch (err: any) {
-      setError(err.message || "Doador não encontrado.");
+      setError(err.message || "Doador não encontrado. Verifique e-mail e telefone.");
     } finally {
       setLoading(false);
     }
@@ -53,7 +77,7 @@ export default function PerfilPage() {
         ultimaDoacao: donor.ultimaDoacao,
         optInAlertas: donor.optInAlertas,
       });
-      setSuccess("Dados atualizados com sucesso!");
+      setSuccess("✓ Perfil atualizado com sucesso!");
     } catch (err: any) {
       setError(err.message || "Erro ao atualizar dados.");
     } finally {
@@ -63,7 +87,7 @@ export default function PerfilPage() {
 
   const handleDelete = async () => {
     if (!donor) return;
-    if (!confirm("Tem certeza que deseja apagar todos os seus dados do HemoAlerta? (Direito ao esquecimento LGPD)")) {
+    if (!confirm("Tem certeza que deseja solicitar a exclusão de todos os seus dados? (Direito ao esquecimento LGPD)")) {
       return;
     }
 
@@ -72,239 +96,238 @@ export default function PerfilPage() {
       await deleteDonor(donor.id);
       setDonor(null);
       setEmail("");
-      setWhatsapp("");
-      setSuccess("Seus dados foram excluídos definitivamente dos nossos registros.");
+      setTelefone("");
+      setSuccess("Seus dados foram excluídos definitivamente do sistema conforme a LGPD.");
     } catch (err: any) {
-      setError(err.message || "Erro ao excluir conta.");
+      setError(err.message || "Erro ao excluir cadastro.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div className="text-center max-w-2xl mx-auto mb-10">
-        <span className="text-3xl">👤</span>
-        <h1 className="text-3xl font-black text-zinc-900 mt-2">
-          Área do Doador — Meu Perfil
-        </h1>
-        <p className="mt-2 text-zinc-600 text-sm">
-          Gerencie seus dados e preferências de notificação em conformidade com a LGPD.
-        </p>
-      </div>
-
-      {success && (
-        <div className="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-semibold flex items-center gap-3">
-          <span>✓</span> {success}
-        </div>
-      )}
-
-      {error && (
-        <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm font-semibold flex items-center gap-3">
-          <span>⚠️</span> {error}
-        </div>
-      )}
-
-      {!donor ? (
-        /* Tela de Acesso / Login */
-        <div className="bg-white rounded-3xl border border-rose-100 p-8 shadow-sm">
-          <h2 className="text-xl font-bold text-zinc-900 mb-2">
-            Acesse seu cadastro
-          </h2>
-          <p className="text-sm text-zinc-600 mb-6">
-            Informe o e-mail e o WhatsApp cadastrados para visualizar ou atualizar seus dados.
-          </p>
-
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-600 mb-1.5">
-                E-mail cadastrado
-              </label>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="seu.email@exemplo.com"
-                className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-red-500 outline-none text-zinc-800 text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-600 mb-1.5">
-                WhatsApp cadastrado
-              </label>
-              <input
-                type="text"
-                required
-                value={whatsapp}
-                onChange={(e) => setWhatsapp(e.target.value)}
-                placeholder="(11) 98765-4321"
-                className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-red-500 outline-none text-zinc-800 text-sm font-mono"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow-md shadow-red-600/20 transition disabled:opacity-50"
-            >
-              {loading ? "Verificando..." : "Acessar Meus Dados"}
-            </button>
-          </form>
-        </div>
-      ) : (
-        /* Tela de Edição de Dados */
-        <div className="bg-white rounded-3xl border border-rose-100 p-8 shadow-sm">
-          <div className="flex items-center justify-between pb-6 mb-6 border-b border-zinc-100">
-            <div>
-              <div className="text-lg font-black text-zinc-900">
-                {donor.nomeCompleto}
-              </div>
-              <div className="text-xs text-zinc-600 font-mono">
-                ID: {donor.id}
+    <div style={{ maxWidth: "1180px", margin: "0 auto", padding: "clamp(20px, 4vw, 40px)" }}>
+      <div className="panel">
+        {/* LOGIN / ACESSO AO PERFIL */}
+        {!donor ? (
+          <div id="perfilLogin" style={{ display: "block" }}>
+            <div className="panel__head">
+              <div>
+                <h2>👤 Meu Perfil</h2>
+                <p>Acesse seu perfil de doador usando email e telefone</p>
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setDonor(null)}
-              className="text-xs text-zinc-600 hover:text-zinc-900 font-bold underline"
-            >
-              Sair
-            </button>
+            <div style={{ padding: "40px", maxWidth: "440px", margin: "0 auto" }}>
+              {error && (
+                <div style={{ background: "#fff1f3", border: "1px solid #d71e3a", color: "#d71e3a", padding: "12px 16px", borderRadius: "8px", marginBottom: "16px", fontSize: "0.9rem" }}>
+                  {error}
+                </div>
+              )}
+              {success && (
+                <div style={{ background: "#e7f4ec", border: "1px solid #1e7a4d", color: "#1e7a4d", padding: "12px 16px", borderRadius: "8px", marginBottom: "16px", fontSize: "0.9rem" }}>
+                  {success}
+                </div>
+              )}
+
+              <form onSubmit={handleLogin} className="form" noValidate>
+                <div className="field">
+                  <label htmlFor="perfilEmail">E-mail <span className="req">*</span></label>
+                  <input
+                    type="email"
+                    id="perfilEmail"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="seu@email.com"
+                    autoComplete="email"
+                  />
+                </div>
+
+                <div className="field">
+                  <label htmlFor="perfilTelefone">Telefone/WhatsApp <span className="req">*</span></label>
+                  <input
+                    type="tel"
+                    id="perfilTelefone"
+                    value={telefone}
+                    onChange={(e) => setTelefone(handlePhoneInput(e.target.value))}
+                    placeholder="(11) 90000-0000"
+                    maxLength={16}
+                    inputMode="numeric"
+                  />
+                  <small style={{ display: "block", color: "var(--muted)", fontSize: "0.8rem", marginTop: "4px" }}>
+                    O mesmo número que cadastrou
+                  </small>
+                </div>
+
+                <div className="form__actions" style={{ marginTop: "24px" }}>
+                  <button type="submit" disabled={loading} className="btn btn--primary" style={{ width: "100%", justifyContent: "center" }}>
+                    {loading ? "Verificando..." : "Acessar Perfil"}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-
-          <form onSubmit={handleUpdate} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-600 mb-1">
-                  Nome Completo
-                </label>
-                <input
-                  type="text"
-                  value={donor.nomeCompleto}
-                  onChange={(e) => setDonor({ ...donor, nomeCompleto: e.target.value })}
-                  className="w-full px-4 py-2 rounded-xl border border-zinc-200 focus:border-red-500 outline-none text-sm text-zinc-800"
-                />
-              </div>
-
+        ) : (
+          /* DADOS DO PERFIL */
+          <div id="perfilData" style={{ display: "block" }}>
+            <div className="panel__head">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-600 mb-1">
-                  Tipo Sanguíneo
-                </label>
-                <select
-                  value={donor.tipoSanguineo}
-                  onChange={(e) => setDonor({ ...donor, tipoSanguineo: e.target.value })}
-                  className="w-full px-4 py-2 rounded-xl border border-zinc-200 focus:border-red-500 outline-none text-sm font-bold text-zinc-800"
+                <h2 id="perfilNome" style={{ color: "var(--blood)" }}>{donor.nomeCompleto}</h2>
+                <p id="perfilEmail2">{donor.email || "E-mail não cadastrado"} • ID: {donor.id}</p>
+              </div>
+              <div style={{ display: "flex", gap: "10px" }}>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="btn btn--danger-ghost"
+                  style={{ fontSize: "0.85rem", padding: "8px 14px" }}
                 >
-                  {TIPOS.map((t) => (
-                    <option key={t} value={t}>
-                      {t || "Não informado"}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-600 mb-1">
-                  WhatsApp
-                </label>
-                <input
-                  type="text"
-                  value={donor.whatsapp}
-                  onChange={(e) => setDonor({ ...donor, whatsapp: e.target.value })}
-                  className="w-full px-4 py-2 rounded-xl border border-zinc-200 focus:border-red-500 outline-none text-sm text-zinc-800 font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-600 mb-1">
-                  Cidade
-                </label>
-                <input
-                  type="text"
-                  value={donor.cidade}
-                  onChange={(e) => setDonor({ ...donor, cidade: e.target.value })}
-                  className="w-full px-4 py-2 rounded-xl border border-zinc-200 focus:border-red-500 outline-none text-sm text-zinc-800"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-600 mb-1">
-                  Estado (UF)
-                </label>
-                <select
-                  value={donor.estado}
-                  onChange={(e) => setDonor({ ...donor, estado: e.target.value })}
-                  className="w-full px-4 py-2 rounded-xl border border-zinc-200 focus:border-red-500 outline-none text-sm text-zinc-800"
+                  Excluir Conta (LGPD)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDonor(null)}
+                  className="btn btn--ghost"
+                  style={{ fontSize: "0.85rem", padding: "8px 14px" }}
                 >
-                  {UFS.map((uf) => (
-                    <option key={uf} value={uf}>
-                      {uf}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-600 mb-1">
-                  E-mail
-                </label>
-                <input
-                  type="email"
-                  value={donor.email || ""}
-                  onChange={(e) => setDonor({ ...donor, email: e.target.value })}
-                  className="w-full px-4 py-2 rounded-xl border border-zinc-200 focus:border-red-500 outline-none text-sm text-zinc-800"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-600 mb-1">
-                  Data da Última Doação
-                </label>
-                <input
-                  type="date"
-                  value={donor.ultimaDoacao || ""}
-                  onChange={(e) => setDonor({ ...donor, ultimaDoacao: e.target.value })}
-                  className="w-full px-4 py-2 rounded-xl border border-zinc-200 focus:border-red-500 outline-none text-sm text-zinc-800"
-                />
+                  Sair
+                </button>
               </div>
             </div>
 
-            <div className="pt-2">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={donor.optInAlertas}
-                  onChange={(e) => setDonor({ ...donor, optInAlertas: e.target.checked })}
-                  className="w-4 h-4 rounded text-red-600"
-                />
-                <span className="text-xs font-bold text-zinc-700">
-                  Desejo continuar recebendo alertas de emergência no WhatsApp
-                </span>
-              </label>
-            </div>
+            <div style={{ padding: "30px" }}>
+              {error && (
+                <div style={{ background: "#fff1f3", border: "1px solid #d71e3a", color: "#d71e3a", padding: "12px 16px", borderRadius: "8px", marginBottom: "16px" }}>
+                  {error}
+                </div>
+              )}
+              {success && (
+                <div style={{ background: "#e7f4ec", border: "1px solid #1e7a4d", color: "#1e7a4d", padding: "12px 16px", borderRadius: "8px", marginBottom: "16px" }}>
+                  {success}
+                </div>
+              )}
 
-            <div className="pt-4 flex gap-3">
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm transition"
-              >
-                Salvar Alterações
-              </button>
-              <button
-                type="button"
-                onClick={handleDelete}
-                className="px-4 py-3 rounded-xl border border-rose-200 text-rose-700 hover:bg-rose-50 text-xs font-bold transition"
-              >
-                Excluir Cadastro (LGPD)
-              </button>
+              <form onSubmit={handleUpdate} className="form" noValidate>
+                <div className="field">
+                  <label htmlFor="perfilEditNome">Nome completo <span className="req">*</span></label>
+                  <input
+                    type="text"
+                    id="perfilEditNome"
+                    value={donor.nomeCompleto}
+                    onChange={(e) => setDonor({ ...donor, nomeCompleto: e.target.value })}
+                  />
+                </div>
+
+                <div className="grid-2">
+                  <div className="field">
+                    <label htmlFor="perfilEditTipo">Tipo sanguíneo <span className="req">*</span></label>
+                    <div className="select-wrap">
+                      <select
+                        id="perfilEditTipo"
+                        value={donor.tipoSanguineo}
+                        onChange={(e) => setDonor({ ...donor, tipoSanguineo: e.target.value })}
+                      >
+                        {TIPOS.map((t) => (
+                          <option key={t} value={t}>{t || "Não informado"}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="field">
+                    <label htmlFor="perfilEditNascimento">Data de nascimento</label>
+                    <input
+                      type="date"
+                      id="perfilEditNascimento"
+                      value={donor.dataNascimento || ""}
+                      onChange={(e) => setDonor({ ...donor, dataNascimento: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid-2">
+                  <div className="field">
+                    <label htmlFor="perfilEditCidade">Cidade <span className="req">*</span></label>
+                    <input
+                      type="text"
+                      id="perfilEditCidade"
+                      value={donor.cidade}
+                      onChange={(e) => setDonor({ ...donor, cidade: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="field field--uf">
+                    <label htmlFor="perfilEditEstado">UF <span className="req">*</span></label>
+                    <div className="select-wrap">
+                      <select
+                        id="perfilEditEstado"
+                        value={donor.estado}
+                        onChange={(e) => setDonor({ ...donor, estado: e.target.value })}
+                      >
+                        {UFS.map((uf) => (
+                          <option key={uf} value={uf}>{uf}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid-2">
+                  <div className="field">
+                    <label htmlFor="perfilEditWhatsapp">WhatsApp <span className="req">*</span></label>
+                    <input
+                      type="tel"
+                      id="perfilEditWhatsapp"
+                      value={donor.whatsapp}
+                      onChange={(e) => setDonor({ ...donor, whatsapp: handlePhoneInput(e.target.value) })}
+                      maxLength={16}
+                    />
+                  </div>
+
+                  <div className="field">
+                    <label htmlFor="perfilEditEmail">E-mail <span className="req">*</span></label>
+                    <input
+                      type="email"
+                      id="perfilEditEmail"
+                      value={donor.email || ""}
+                      onChange={(e) => setDonor({ ...donor, email: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="field">
+                  <label htmlFor="perfilEditUltimaDoacao">Data da última doação (opcional)</label>
+                  <input
+                    type="date"
+                    id="perfilEditUltimaDoacao"
+                    value={donor.ultimaDoacao || ""}
+                    onChange={(e) => setDonor({ ...donor, ultimaDoacao: e.target.value })}
+                  />
+                </div>
+
+                <div className="consents">
+                  <label className="check">
+                    <input
+                      type="checkbox"
+                      id="perfilEditOptIn"
+                      checked={donor.optInAlertas}
+                      onChange={(e) => setDonor({ ...donor, optInAlertas: e.target.checked })}
+                    />
+                    <span className="check__box" aria-hidden="true"></span>
+                    <span className="check__label">Aceita receber alertas de emergência no WhatsApp</span>
+                  </label>
+                </div>
+
+                <div className="form__actions" style={{ marginTop: "24px" }}>
+                  <button type="submit" disabled={loading} className="btn btn--primary">
+                    💾 Salvar Alterações
+                  </button>
+                </div>
+              </form>
             </div>
-          </form>
-        </div>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

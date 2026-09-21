@@ -8,314 +8,362 @@ const UFS = [
   "PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"
 ];
 
-const TIPOS_SANGUINEOS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "NS"];
-
 export default function CadastroPage() {
   const [formData, setFormData] = useState({
-    nomeCompleto: "",
-    tipoSanguineo: "",
-    dataNascimento: "",
+    nome: "",
+    tipo: "",
+    nascimento: "",
     cidade: "",
-    estado: "SP",
+    estado: "",
     whatsapp: "",
     email: "",
     ultimaDoacao: "",
-    optInAlertas: true,
-    consentimentoLGPD: true,
+    optIn: true,
+    lgpd: true,
   });
 
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Máscara de WhatsApp automática
-  const handlePhoneChange = (val: string) => {
-    const digits = val.replace(/\D/g, "").slice(0, 11);
-    let formatted = "";
-    if (digits.length > 0) formatted = "(" + digits.slice(0, 2);
-    if (digits.length >= 2) formatted += ") ";
+  const maskWhatsapp = (value: string) => {
+    const digits = (value || "").replace(/\D/g, "").slice(0, 11);
+    let out = "";
+    if (digits.length > 0) out = "(" + digits.slice(0, 2);
+    if (digits.length >= 2) out += ") ";
     if (digits.length > 2) {
       const rest = digits.slice(2);
-      if (rest.length <= 4) formatted += rest;
-      else if (rest.length <= 8) formatted += rest.slice(0, 4) + "-" + rest.slice(4);
-      else formatted += rest.slice(0, 5) + "-" + rest.slice(5);
+      if (rest.length <= 4) out += rest;
+      else if (rest.length <= 8) out += rest.slice(0, 4) + "-" + rest.slice(4);
+      else out += rest.slice(0, 5) + "-" + rest.slice(5);
     }
-    setFormData((prev) => ({ ...prev, whatsapp: formatted }));
+    return out;
+  };
+
+  const handlePhoneInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const masked = maskWhatsapp(e.target.value);
+    setFormData((prev) => ({ ...prev, whatsapp: masked }));
+    if (errors.whatsapp) setErrors((prev) => ({ ...prev, whatsapp: "" }));
+  };
+
+  const validate = () => {
+    const errs: Record<string, string> = {};
+    if (!formData.nome.trim() || formData.nome.trim().length < 3) {
+      errs.nome = "Informe o nome completo.";
+    }
+    if (!formData.tipo) {
+      errs.tipo = "Selecione o tipo sanguíneo.";
+    }
+    if (!formData.cidade.trim()) {
+      errs.cidade = "Informe a cidade.";
+    }
+    if (!formData.estado) {
+      errs.estado = "UF.";
+    }
+    const digits = formData.whatsapp.replace(/\D/g, "");
+    if (digits.length < 10 || digits.length > 11) {
+      errs.whatsapp = "WhatsApp inválido. Use DDD + número.";
+    }
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errs.email = "E-mail inválido.";
+    }
+    if (formData.nascimento) {
+      const nasc = new Date(formData.nascimento);
+      const hoje = new Date();
+      let a = hoje.getFullYear() - nasc.getFullYear();
+      if (hoje.getMonth() < nasc.getMonth() || (hoje.getMonth() === nasc.getMonth() && hoje.getDate() < nasc.getDate())) a--;
+      if (a < 16) errs.nascimento = "Doadores devem ter ao menos 16 anos.";
+      else if (a > 120) errs.nascimento = "Data de nascimento inválida.";
+      if (nasc > hoje) errs.nascimento = "Data não pode ser no futuro.";
+    }
+    if (!formData.optIn) {
+      errs.optIn = "É necessário aceitar o recebimento de alertas.";
+    }
+    if (!formData.lgpd) {
+      errs.lgpd = "É necessário concordar com a LGPD.";
+    }
+
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     setSuccess(null);
+    if (!validate()) return;
 
-    // Validações
-    if (!formData.nomeCompleto.trim()) {
-      setError("Por favor, informe seu nome completo.");
-      return;
-    }
-    if (!formData.tipoSanguineo) {
-      setError("Selecione seu tipo sanguíneo.");
-      return;
-    }
-    const cleanPhone = formData.whatsapp.replace(/\D/g, "");
-    if (cleanPhone.length < 10) {
-      setError("Informe um número de WhatsApp válido com DDD.");
-      return;
-    }
-    if (!formData.cidade.trim()) {
-      setError("Informe sua cidade.");
-      return;
-    }
-    if (!formData.consentimentoLGPD) {
-      setError("Você precisa concordar com os termos da LGPD para continuar.");
-      return;
-    }
-
-    // Checagem de idade mínima 16 anos se informada
-    if (formData.dataNascimento) {
-      const nasc = new Date(formData.dataNascimento);
-      const hoje = new Date();
-      let idade = hoje.getFullYear() - nasc.getFullYear();
-      if (hoje.getMonth() < nasc.getMonth() || (hoje.getMonth() === nasc.getMonth() && hoje.getDate() < nasc.getDate())) {
-        idade--;
-      }
-      if (idade < 16) {
-        setError("Doadores devem ter no mínimo 16 anos de idade.");
-        return;
-      }
-    }
-
+    setLoading(true);
     try {
-      setLoading(true);
       await createDonor({
-        nomeCompleto: formData.nomeCompleto,
-        tipoSanguineo: formData.tipoSanguineo,
-        dataNascimento: formData.dataNascimento || undefined,
+        nomeCompleto: formData.nome,
+        tipoSanguineo: formData.tipo,
+        dataNascimento: formData.nascimento || undefined,
         cidade: formData.cidade,
         estado: formData.estado,
         whatsapp: formData.whatsapp,
         email: formData.email || undefined,
         ultimaDoacao: formData.ultimaDoacao || undefined,
-        optInAlertas: formData.optInAlertas,
-        consentimentoLGPD: formData.consentimentoLGPD,
+        optInAlertas: formData.optIn,
+        consentimentoLGPD: formData.lgpd,
       });
 
-      setSuccess("Cadastro realizado com sucesso! Muito obrigado por ser um herói e salvar vidas. 🩸");
+      setSuccess("Cadastro confirmado! Obrigado por salvar vidas. 🩸");
       setFormData({
-        nomeCompleto: "",
-        tipoSanguineo: "",
-        dataNascimento: "",
+        nome: "",
+        tipo: "",
+        nascimento: "",
         cidade: "",
-        estado: "SP",
+        estado: "",
         whatsapp: "",
         email: "",
         ultimaDoacao: "",
-        optInAlertas: true,
-        consentimentoLGPD: true,
+        optIn: true,
+        lgpd: true,
       });
+      setErrors({});
     } catch (err: any) {
-      setError(err.message || "Erro ao conectar com o servidor.");
+      setErrors({ global: err.message || "Erro ao salvar no banco de dados." });
     } finally {
       setLoading(false);
     }
   };
 
+  const handleReset = () => {
+    setFormData({
+      nome: "",
+      tipo: "",
+      nascimento: "",
+      cidade: "",
+      estado: "",
+      whatsapp: "",
+      email: "",
+      ultimaDoacao: "",
+      optIn: true,
+      lgpd: true,
+    });
+    setErrors({});
+    setSuccess(null);
+  };
+
   return (
-    <div className="max-w-3xl mx-auto px-4 py-12">
-      <div className="bg-white rounded-3xl border border-rose-100 shadow-xl shadow-rose-950/5 overflow-hidden">
-        {/* Cabeçalho do formulário */}
-        <div className="bg-linear-to-r from-red-600 to-rose-700 p-8 text-white">
-          <span className="text-3xl">🩸</span>
-          <h1 className="text-2xl sm:text-3xl font-black mt-2">
-            Cadastro de Doador Voluntário
-          </h1>
-          <p className="text-rose-100 text-sm mt-1">
-            Leva menos de 1 minuto. Você só será acionado quando alguém da sua região precisar urgentemente do seu sangue.
-          </p>
-        </div>
+    <div style={{ maxWidth: "1180px", margin: "0 auto", padding: "clamp(20px, 4vw, 40px)" }}>
+      <div className="split">
+        {/* Painel de marca */}
+        <aside className="hero">
+          <div className="hero__inner">
+            <span className="hero__badge">Rede de doadores voluntários</span>
+            <h1 className="hero__title">Cada cadastro pode salvar até <em>4 vidas</em>.</h1>
+            <p className="hero__lead">
+              Cadastre-se na HemoAlerta e seja avisado pelo WhatsApp apenas quando
+              o seu tipo sanguíneo entrar em nível crítico no hemocentro da sua cidade.
+              Sem spam. Só quando importa de verdade.
+            </p>
+
+            <ul className="hero__points">
+              <li><span className="dot"></span> Alerta inteligente por tipo e cidade</li>
+              <li><span className="dot"></span> Você decide quando responder: SIM / NÃO / AGENDAR</li>
+              <li><span className="dot"></span> Dados protegidos conforme a LGPD</li>
+            </ul>
+
+            <div className="hero__types" aria-hidden="true">
+              <span>O−</span><span>O+</span><span>A−</span><span>A+</span>
+              <span>B−</span><span>B+</span><span>AB−</span><span>AB+</span>
+            </div>
+          </div>
+        </aside>
 
         {/* Formulário */}
-        <form onSubmit={handleSubmit} className="p-8 space-y-6">
+        <div className="formwrap">
+          <div className="formhead">
+            <h2>Quero ser doador</h2>
+            <p>Leva menos de um minuto. Os campos com <span className="req">*</span> são obrigatórios.</p>
+          </div>
+
           {success && (
-            <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-semibold flex items-center gap-3">
-              <span className="text-xl">✓</span>
-              {success}
+            <div style={{ background: "#e7f4ec", border: "1px solid #1e7a4d", color: "#1e7a4d", padding: "12px 16px", borderRadius: "10px", marginTop: "16px", fontWeight: 600, fontSize: "0.95rem" }}>
+              ✓ {success}
             </div>
           )}
 
-          {error && (
-            <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm font-semibold flex items-center gap-3">
-              <span className="text-xl">⚠️</span>
-              {error}
+          {errors.global && (
+            <div style={{ background: "#fff1f3", border: "1px solid #d71e3a", color: "#d71e3a", padding: "12px 16px", borderRadius: "10px", marginTop: "16px", fontWeight: 600, fontSize: "0.95rem" }}>
+              ⚠️ {errors.global}
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {/* Nome Completo */}
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-bold text-zinc-700 mb-2">
-                Nome Completo *
-              </label>
+          <form onSubmit={handleSubmit} onReset={handleReset} className="form" noValidate>
+            <div className={`field ${errors.nome ? "has-error" : ""}`}>
+              <label htmlFor="nome">Nome completo <span className="req">*</span></label>
               <input
                 type="text"
-                required
-                value={formData.nomeCompleto}
-                onChange={(e) => setFormData({ ...formData, nomeCompleto: e.target.value })}
-                placeholder="Ex: Maria Helena Souza"
-                className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 outline-none text-zinc-800"
+                id="nome"
+                name="nome"
+                value={formData.nome}
+                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                placeholder="Ex.: Maria Helena Souza"
               />
+              {errors.nome && <small className="error">{errors.nome}</small>}
             </div>
 
-            {/* Tipo Sanguíneo */}
-            <div>
-              <label className="block text-sm font-bold text-zinc-700 mb-2">
-                Tipo Sanguíneo *
-              </label>
-              <select
-                required
-                value={formData.tipoSanguineo}
-                onChange={(e) => setFormData({ ...formData, tipoSanguineo: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 outline-none bg-white text-zinc-800 font-bold"
-              >
-                <option value="">Selecione...</option>
-                {TIPOS_SANGUINEOS.map((tipo) => (
-                  <option key={tipo} value={tipo}>
-                    {tipo === "NS" ? "Não sei meu tipo" : tipo}
-                  </option>
-                ))}
-              </select>
+            <div className="grid-2">
+              <div className={`field ${errors.tipo ? "has-error" : ""}`}>
+                <label htmlFor="tipo">Tipo sanguíneo <span className="req">*</span></label>
+                <div className="select-wrap">
+                  <select
+                    id="tipo"
+                    name="tipo"
+                    value={formData.tipo}
+                    onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
+                  >
+                    <option value="" disabled>Selecione</option>
+                    <option value="A+">A+</option>
+                    <option value="A-">A−</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B−</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB−</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O−</option>
+                    <option value="NS">Não sei</option>
+                  </select>
+                </div>
+                {errors.tipo && <small className="error">{errors.tipo}</small>}
+              </div>
+
+              <div className={`field ${errors.nascimento ? "has-error" : ""}`}>
+                <label htmlFor="nascimento">Data de nascimento</label>
+                <input
+                  type="date"
+                  id="nascimento"
+                  name="nascimento"
+                  value={formData.nascimento}
+                  onChange={(e) => setFormData({ ...formData, nascimento: e.target.value })}
+                />
+                {errors.nascimento && <small className="error">{errors.nascimento}</small>}
+              </div>
             </div>
 
-            {/* WhatsApp */}
-            <div>
-              <label className="block text-sm font-bold text-zinc-700 mb-2">
-                WhatsApp com DDD *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.whatsapp}
-                onChange={(e) => handlePhoneChange(e.target.value)}
-                placeholder="(11) 98765-4321"
-                className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 outline-none text-zinc-800 font-mono"
-              />
+            <div className="grid-2">
+              <div className={`field ${errors.cidade ? "has-error" : ""}`}>
+                <label htmlFor="cidade">Cidade <span className="req">*</span></label>
+                <input
+                  type="text"
+                  id="cidade"
+                  name="cidade"
+                  value={formData.cidade}
+                  onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
+                  placeholder="Ex.: São Paulo"
+                />
+                {errors.cidade && <small className="error">{errors.cidade}</small>}
+              </div>
+
+              <div className={`field field--uf ${errors.estado ? "has-error" : ""}`}>
+                <label htmlFor="estado">UF <span className="req">*</span></label>
+                <div className="select-wrap">
+                  <select
+                    id="estado"
+                    name="estado"
+                    value={formData.estado}
+                    onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
+                  >
+                    <option value="" disabled>—</option>
+                    {UFS.map((uf) => (
+                      <option key={uf} value={uf}>{uf}</option>
+                    ))}
+                  </select>
+                </div>
+                {errors.estado && <small className="error">{errors.estado}</small>}
+              </div>
             </div>
 
-            {/* Cidade */}
-            <div>
-              <label className="block text-sm font-bold text-zinc-700 mb-2">
-                Cidade *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.cidade}
-                onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
-                placeholder="Ex: São Paulo"
-                className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 outline-none text-zinc-800"
-              />
+            <div className="grid-2">
+              <div className={`field ${errors.whatsapp ? "has-error" : ""}`}>
+                <label htmlFor="whatsapp">WhatsApp <span className="req">*</span></label>
+                <input
+                  type="tel"
+                  id="whatsapp"
+                  name="whatsapp"
+                  inputMode="numeric"
+                  value={formData.whatsapp}
+                  onChange={handlePhoneInput}
+                  placeholder="(11) 90000-0000"
+                  maxLength={16}
+                />
+                {errors.whatsapp && <small className="error">{errors.whatsapp}</small>}
+              </div>
+
+              <div className={`field ${errors.email ? "has-error" : ""}`}>
+                <label htmlFor="email">E-mail <span className="opt">(opcional)</span></label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="nome@exemplo.com"
+                />
+                {errors.email && <small className="error">{errors.email}</small>}
+              </div>
             </div>
 
-            {/* Estado UF */}
-            <div>
-              <label className="block text-sm font-bold text-zinc-700 mb-2">
-                Estado (UF) *
-              </label>
-              <select
-                required
-                value={formData.estado}
-                onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 outline-none bg-white text-zinc-800"
-              >
-                {UFS.map((uf) => (
-                  <option key={uf} value={uf}>
-                    {uf}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* E-mail (Opcional) */}
-            <div>
-              <label className="block text-sm font-bold text-zinc-700 mb-2">
-                E-mail (opcional)
-              </label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="seu.email@exemplo.com"
-                className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 outline-none text-zinc-800"
-              />
-            </div>
-
-            {/* Data de Nascimento */}
-            <div>
-              <label className="block text-sm font-bold text-zinc-700 mb-2">
-                Data de Nascimento
-              </label>
+            <div className="field">
+              <label htmlFor="ultimaDoacao">Data da última doação <span className="opt">(opcional)</span></label>
               <input
                 type="date"
-                value={formData.dataNascimento}
-                onChange={(e) => setFormData({ ...formData, dataNascimento: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 outline-none text-zinc-800"
-              />
-            </div>
-
-            {/* Última Doação */}
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-bold text-zinc-700 mb-2">
-                Data da Última Doação (se houver)
-              </label>
-              <input
-                type="date"
+                id="ultimaDoacao"
+                name="ultimaDoacao"
                 value={formData.ultimaDoacao}
                 onChange={(e) => setFormData({ ...formData, ultimaDoacao: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 outline-none text-zinc-800"
               />
-              <span className="text-xs text-zinc-600 mt-1 block">
-                Ajuda nosso sistema a calcular se você já está no período apto para nova doação.
-              </span>
+              <small className="hint">Usamos para não incomodar antes do intervalo obrigatório.</small>
             </div>
-          </div>
 
-          {/* Consentimentos LGPD */}
-          <div className="bg-rose-50/60 p-5 rounded-2xl border border-rose-100 space-y-3">
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={formData.optInAlertas}
-                onChange={(e) => setFormData({ ...formData, optInAlertas: e.target.checked })}
-                className="mt-1 w-5 h-5 rounded text-red-600 focus:ring-red-500"
-              />
-              <span className="text-xs text-zinc-700 leading-relaxed font-medium">
-                Aceito receber alertas de urgência sanguínea no meu WhatsApp quando houver falta do meu tipo na minha região.
-              </span>
-            </label>
+            <div className="consents">
+              <label className="check">
+                <input
+                  type="checkbox"
+                  id="optIn"
+                  name="optIn"
+                  checked={formData.optIn}
+                  onChange={(e) => setFormData({ ...formData, optIn: e.target.checked })}
+                />
+                <span className="check__box" aria-hidden="true"></span>
+                <span className="check__label">
+                  Aceito receber <strong>alertas de doação</strong> por WhatsApp/e-mail quando meu
+                  tipo sanguíneo estiver em falta. <span className="req">*</span>
+                </span>
+              </label>
+              {errors.optIn && <small className="error">{errors.optIn}</small>}
 
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                required
-                checked={formData.consentimentoLGPD}
-                onChange={(e) => setFormData({ ...formData, consentimentoLGPD: e.target.checked })}
-                className="mt-1 w-5 h-5 rounded text-red-600 focus:ring-red-500"
-              />
-              <span className="text-xs text-zinc-700 leading-relaxed font-medium">
-                Concordo com o tratamento dos meus dados exclusivamente para fins humanitários de doação de sangue, em estrita conformidade com a <strong>LGPD (Lei nº 13.709/2018)</strong>.
-              </span>
-            </label>
-          </div>
+              <label className="check">
+                <input
+                  type="checkbox"
+                  id="lgpd"
+                  name="lgpd"
+                  checked={formData.lgpd}
+                  onChange={(e) => setFormData({ ...formData, lgpd: e.target.checked })}
+                />
+                <span className="check__box" aria-hidden="true"></span>
+                <span className="check__label">
+                  Li e concordo com o tratamento dos meus dados conforme a <strong>LGPD</strong>
+                  (consentimento, criptografia e retenção máxima de 5 anos). <span className="req">*</span>
+                </span>
+              </label>
+              {errors.lgpd && <small className="error">{errors.lgpd}</small>}
+            </div>
 
-          {/* Botão de Envio */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-4 rounded-xl bg-red-600 hover:bg-red-700 text-white font-black text-lg shadow-lg shadow-red-600/30 transition transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? "Salvando cadastro..." : "Confirmar Cadastro e Salvar Vidas 🩸"}
-          </button>
-        </form>
+            <div className="form__actions">
+              <button type="reset" className="btn btn--ghost" disabled={loading}>Limpar</button>
+              <button type="submit" className="btn btn--primary" disabled={loading}>
+                {loading ? "Gravando..." : "Confirmar cadastro"}
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                  <path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="2"
+                    strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

@@ -1,34 +1,30 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchDonors, Donor } from "@/services/api";
+import { fetchDonors, fetchStats, Donor, StatsResponse } from "@/services/api";
 
 const TIPOS = ["", "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "NS"];
-const UFS = [
-  "", "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA",
-  "PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"
-];
 
 export default function DoadoresPage() {
   const [donors, setDonors] = useState<Donor[]>([]);
+  const [stats, setStats] = useState<StatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
+
   const [page, setPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
 
-  // Filtros
   const [search, setSearch] = useState("");
   const [tipo, setTipo] = useState("");
-  const [estado, setEstado] = useState("");
 
   const loadData = () => {
     setLoading(true);
     fetchDonors({
       search: search || undefined,
       tipo: tipo || undefined,
-      estado: estado || undefined,
       page,
-      pageSize: 10,
+      pageSize: itemsPerPage,
     })
       .then((res) => {
         setDonors(res.items);
@@ -37,24 +33,26 @@ export default function DoadoresPage() {
       })
       .catch((err) => console.error("Erro ao carregar doadores:", err))
       .finally(() => setLoading(false));
+
+    fetchStats()
+      .then((s) => setStats(s))
+      .catch(() => {});
   };
 
   useEffect(() => {
     loadData();
-  }, [page, tipo, estado]);
+  }, [page, itemsPerPage, tipo]);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearch(e.target.value);
     setPage(1);
-    loadData();
   };
 
   const handleExportJSON = () => {
-    // Exporta todos os doadores carregados em formato JSON estruturado
     const payload = {
       tabela: "DOADORES",
       sistema: "HemoAlerta",
-      exportadoEm: new Date().toISOString(),
+      geradoEm: new Date().toISOString(),
       total: donors.length,
       doadores: donors,
     };
@@ -62,190 +60,246 @@ export default function DoadoresPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `hemoalerta-doadores-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = "doadores.json";
+    document.body.appendChild(a);
     a.click();
+    a.remove();
     URL.revokeObjectURL(url);
   };
 
+  const totalCadastrados = stats?.totalDoadores ?? total;
+  const comAlertaAtivo = stats?.doadoresAtivos ?? 0;
+  const totalTipos = stats ? Object.keys(stats.distribuicaoPorTipo).length : 8;
+  const doadoresUniversais = stats?.doadoresUniversais ?? 0;
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-3xl font-black text-zinc-900 tracking-tight">
-            Painel de Voluntários
-          </h1>
-          <p className="text-sm text-zinc-600 mt-1">
-            Total de {total} voluntários cadastrados. Dados protegidos por sigilo LGPD.
-          </p>
+    <div style={{ maxWidth: "1180px", margin: "0 auto", padding: "clamp(20px, 4vw, 40px)" }}>
+      <div className="panel">
+        <div className="panel__head">
+          <div>
+            <h2>Doadores cadastrados</h2>
+            <p id="panelSub">
+              Banco de dados relacional SQLite (<code>hemoalerta.db</code>) — pronto para exportar em <code>doadores.json</code>.
+            </p>
+          </div>
+          <div className="panel__tools">
+            <label className="filter">
+              <span>Tipo</span>
+              <div className="select-wrap select-wrap--sm">
+                <select
+                  id="filterTipo"
+                  value={tipo}
+                  onChange={(e) => {
+                    setTipo(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  <option value="">Todos</option>
+                  <option value="A+">A+</option>
+                  <option value="A-">A−</option>
+                  <option value="B+">B+</option>
+                  <option value="B-">B−</option>
+                  <option value="AB+">AB+</option>
+                  <option value="AB-">AB−</option>
+                  <option value="O+">O+</option>
+                  <option value="O-">O−</option>
+                </select>
+              </div>
+            </label>
+            <input
+              type="search"
+              id="searchInput"
+              className="search"
+              placeholder="Buscar nome ou cidade…"
+              value={search}
+              onChange={handleSearchChange}
+              onKeyDown={(e) => e.key === "Enter" && loadData()}
+            />
+            <button
+              type="button"
+              onClick={handleExportJSON}
+              className="btn btn--primary"
+              style={{ padding: "8px 16px", fontSize: "0.85rem" }}
+            >
+              Exportar JSON
+            </button>
+          </div>
         </div>
 
-        <button
-          onClick={handleExportJSON}
-          className="px-5 py-2.5 rounded-xl bg-zinc-900 hover:bg-black text-white text-xs font-bold transition flex items-center gap-2 shadow-xs w-fit"
+        {/* Estatísticas */}
+        <div className="stats" id="stats">
+          <div className="stat">
+            <div className="stat__num">{totalCadastrados}</div>
+            <div className="stat__label">Doadores cadastrados</div>
+          </div>
+          <div className="stat">
+            <div className="stat__num">{comAlertaAtivo}</div>
+            <div className="stat__label">Com alertas ativos</div>
+          </div>
+          <div className="stat">
+            <div className="stat__num">{totalTipos}</div>
+            <div className="stat__label">Tipos sanguíneos</div>
+          </div>
+          <div className="stat">
+            <div className="stat__num">{doadoresUniversais}</div>
+            <div className="stat__label">Doadores O− (universal)</div>
+          </div>
+        </div>
+
+        {/* Controles de Paginação */}
+        <div
+          style={{
+            padding: "18px 20px",
+            background: "#fafafa",
+            borderRadius: "8px",
+            marginBottom: "0",
+            borderBottom: "1px solid #e0e0e0",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "16px",
+          }}
         >
-          <span>📥</span> Exportar Dados (JSON)
-        </button>
-      </div>
-
-      {/* Barra de Filtros */}
-      <div className="bg-white p-6 rounded-3xl border border-rose-100 shadow-sm mb-8">
-        <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-bold uppercase tracking-wider text-zinc-600 mb-1.5">
-              Buscar Voluntário ou Cidade
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Ex: Carlos ou Campinas..."
-                className="w-full px-4 py-2 rounded-xl border border-zinc-200 focus:border-red-500 outline-none text-sm text-zinc-800"
-              />
-              <button
-                type="submit"
-                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs transition"
-              >
-                Filtrar
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-zinc-600 mb-1.5">
-              Tipo Sanguíneo
+          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+            <label htmlFor="itemsPerPage" style={{ fontSize: "0.9rem", fontWeight: 500, color: "#666" }}>
+              Mostrar:
             </label>
             <select
-              value={tipo}
+              id="itemsPerPage"
+              value={itemsPerPage}
               onChange={(e) => {
-                setTipo(e.target.value);
+                setItemsPerPage(Number(e.target.value));
                 setPage(1);
               }}
-              className="w-full px-4 py-2 rounded-xl border border-zinc-200 focus:border-red-500 outline-none text-sm text-zinc-800 font-bold"
+              style={{
+                padding: "8px 12px",
+                border: "1.5px solid #e0e0e0",
+                borderRadius: "6px",
+                fontSize: "0.9rem",
+                cursor: "pointer",
+                background: "white",
+                color: "#333",
+              }}
             >
-              <option value="">Todos os tipos</option>
-              {TIPOS.filter(Boolean).map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
+              <option value="10">10 por página</option>
+              <option value="20">20 por página</option>
+              <option value="50">50 por página</option>
+              <option value="100">100 por página</option>
             </select>
           </div>
 
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-zinc-600 mb-1.5">
-              Estado (UF)
-            </label>
-            <select
-              value={estado}
-              onChange={(e) => {
-                setEstado(e.target.value);
-                setPage(1);
-              }}
-              className="w-full px-4 py-2 rounded-xl border border-zinc-200 focus:border-red-500 outline-none text-sm text-zinc-800"
-            >
-              <option value="">Todos os estados</option>
-              {UFS.filter(Boolean).map((u) => (
-                <option key={u} value={u}>
-                  {u}
-                </option>
-              ))}
-            </select>
+          <div id="paginationInfo" style={{ fontSize: "0.9rem", color: "#666", fontWeight: 500 }}>
+            Página {page} de {totalPages || 1} • {total} doador{total === 1 ? "" : "es"}
           </div>
-        </form>
-      </div>
 
-      {/* Tabela de Doadores */}
-      <div className="bg-white rounded-3xl border border-rose-100 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <div style={{ display: "flex", gap: "8px" }}>
+            <button
+              id="paginationPrev"
+              className="pagination-btn"
+              style={{ minWidth: "auto", padding: "8px 12px" }}
+              disabled={page === 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              title="Página anterior"
+            >
+              ← Anterior
+            </button>
+            <button
+              id="paginationNext"
+              className="pagination-btn"
+              style={{ minWidth: "auto", padding: "8px 12px" }}
+              disabled={page === totalPages || totalPages === 0}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              title="Próxima página"
+            >
+              Próximo →
+            </button>
+          </div>
+        </div>
+
+        {/* Tabela */}
+        <div className="table-scroll">
+          <table className="table" id="donorTable">
             <thead>
-              <tr className="border-b border-zinc-100 bg-zinc-50/50 text-[11px] font-extrabold uppercase tracking-wider text-zinc-600">
-                <th className="py-4 px-6">Doador</th>
-                <th className="py-4 px-4 text-center">Tipo</th>
-                <th className="py-4 px-6">Cidade / UF</th>
-                <th className="py-4 px-6">WhatsApp (LGPD)</th>
-                <th className="py-4 px-6 text-center">Status</th>
-                <th className="py-4 px-6 text-right">Cadastrado em</th>
+              <tr>
+                <th>Nome</th>
+                <th>Tipo</th>
+                <th>Cidade / UF</th>
+                <th>WhatsApp</th>
+                <th>Alertas</th>
+                <th>Cadastro</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100 text-sm">
+            <tbody id="donorTbody">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-zinc-600 font-medium">
-                    Carregando voluntários da base...
+                  <td colSpan={6} style={{ textAlign: "center", padding: "40px 20px", color: "var(--muted)" }}>
+                    Carregando doadores...
                   </td>
                 </tr>
               ) : donors.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-zinc-600 font-medium">
-                    Nenhum doador encontrado para os filtros informados.
+                  <td colSpan={6}>
+                    <div className="empty show" id="emptyState">
+                      <div className="empty__drop" aria-hidden="true">🩸</div>
+                      <h3>Nenhum resultado</h3>
+                      <p>Ajuste a busca ou o filtro de tipo sanguíneo.</p>
+                    </div>
                   </td>
                 </tr>
               ) : (
-                donors.map((d) => (
-                  <tr key={d.id} className="hover:bg-rose-50/30 transition">
-                    <td className="py-4 px-6 font-bold text-zinc-900">
-                      <div>{d.nomeCompleto}</div>
-                      {d.emailExibicao && (
-                        <div className="text-xs text-zinc-600 font-normal font-mono">
-                          {d.emailExibicao}
-                        </div>
-                      )}
-                    </td>
-                    <td className="py-4 px-4 text-center">
-                      <span className="inline-flex items-center justify-center w-10 h-7 rounded-lg bg-red-100 text-red-700 font-black text-xs border border-red-200">
-                        {d.tipoSanguineo}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6 text-zinc-700 font-medium">
-                      {d.cidade} <span className="text-zinc-600 font-bold">/ {d.estado}</span>
-                    </td>
-                    <td className="py-4 px-6 text-zinc-600 font-mono text-xs" title="Protegido por LGPD">
-                      {d.whatsappExibicao || d.whatsapp}
-                    </td>
-                    <td className="py-4 px-6 text-center">
-                      {d.optInAlertas ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
-                          Ativo
+                donors.map((d) => {
+                  const isNS = d.tipoSanguineo === "NS";
+                  const dateStr = d.dataCadastro
+                    ? new Date(d.dataCadastro).toLocaleDateString("pt-BR")
+                    : "—";
+
+                  return (
+                    <tr key={d.id}>
+                      <td>
+                        <div className="cell-name">{d.nomeCompleto}</div>
+                        {d.email && <div className="cell-sub">••••••••••••</div>}
+                      </td>
+                      <td>
+                        <span className={`bt ${isNS ? "bt--ns" : ""}`}>
+                          {isNS ? "—" : d.tipoSanguineo}
                         </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-zinc-100 text-zinc-600">
-                          Inativo
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-4 px-6 text-right text-xs text-zinc-600">
-                      {d.dataCadastro ? new Date(d.dataCadastro).toLocaleDateString("pt-BR") : "—"}
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td>
+                        {d.cidade} <span className="cell-sub">/ {d.estado}</span>
+                      </td>
+                      <td title="Telefone mascarado por LGPD">
+                        {d.whatsappExibicao || d.whatsapp}
+                      </td>
+                      <td>
+                        {d.optInAlertas ? (
+                          <span className="pill pill--on">Ativo</span>
+                        ) : (
+                          <span className="pill pill--off">Inativo</span>
+                        )}
+                      </td>
+                      <td className="cell-sub">{dateStr}</td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
 
-        {/* Paginação */}
-        <div className="p-4 border-t border-zinc-100 flex items-center justify-between">
-          <div className="text-xs text-zinc-600 font-medium">
-            Página {page} de {totalPages} • Total: {total} voluntários
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="px-4 py-1.5 rounded-lg border border-zinc-200 text-xs font-bold text-zinc-700 hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              ← Anterior
-            </button>
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages || totalPages === 0}
-              className="px-4 py-1.5 rounded-lg border border-zinc-200 text-xs font-bold text-zinc-700 hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              Próximo →
-            </button>
-          </div>
+        {/* Paginação Inferior Numerada */}
+        <div id="paginationControls" className="pagination-controls">
+          {totalPages > 1 &&
+            Array.from({ length: totalPages }, (_, i) => i + 1).map((pNum) => (
+              <button
+                key={pNum}
+                type="button"
+                className={`pagination-btn ${pNum === page ? "active" : ""}`}
+                onClick={() => setPage(pNum)}
+              >
+                {pNum}
+              </button>
+            ))}
         </div>
       </div>
     </div>
