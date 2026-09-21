@@ -11,6 +11,7 @@ import {
   broadcastWhatsAppAlert,
   fetchHemocentros,
   createHemocentro,
+  updateHemocentro,
   deleteHemocentro,
   WhatsAppStatus,
   Hemocentro,
@@ -42,6 +43,8 @@ import {
   Search,
   Phone,
   Clock,
+  Pencil,
+  X,
 } from "lucide-react";
 
 const UFS = [
@@ -91,6 +94,7 @@ export default function AdminPage() {
   const [hemoSuccess, setHemoSuccess] = useState<string | null>(null);
   const [hemoError, setHemoError] = useState<string | null>(null);
   const [hemoSubmitting, setHemoSubmitting] = useState(false);
+  const [editingHemoId, setEditingHemoId] = useState<string | null>(null);
   const [hemoForm, setHemoForm] = useState({
     nome: "",
     tipo: "hemocentro",
@@ -252,15 +256,21 @@ export default function AdminPage() {
     }
   };
 
-  const handleAddHemocentro = async (e: React.FormEvent) => {
+  const handleSaveHemocentro = async (e: React.FormEvent) => {
     e.preventDefault();
     setHemoError(null);
     setHemoSuccess(null);
     setHemoSubmitting(true);
 
     try {
-      await createHemocentro(hemoForm);
-      setHemoSuccess("Hemocentro cadastrado com sucesso! Ele já está disponível no mapa e busca pública.");
+      if (editingHemoId) {
+        await updateHemocentro(editingHemoId, hemoForm);
+        setHemoSuccess("Dados do hemocentro atualizados com sucesso!");
+        setEditingHemoId(null);
+      } else {
+        await createHemocentro(hemoForm);
+        setHemoSuccess("Hemocentro cadastrado com sucesso! Ele já está disponível no mapa e busca pública.");
+      }
       setHemoForm({
         nome: "",
         tipo: "hemocentro",
@@ -272,16 +282,48 @@ export default function AdminPage() {
       });
       loadHemocentros();
     } catch (err: any) {
-      setHemoError(err.message || "Erro ao cadastrar hemocentro.");
+      setHemoError(err.message || "Erro ao salvar hemocentro.");
     } finally {
       setHemoSubmitting(false);
     }
+  };
+
+  const handleStartEdit = (h: Hemocentro) => {
+    setEditingHemoId(h.id);
+    setHemoForm({
+      nome: h.nome,
+      tipo: h.tipo,
+      estado: h.estado,
+      cidade: h.cidade,
+      endereco: h.endereco,
+      telefone: h.telefone,
+      horario: h.horario || "Seg-Sex: 7h30-17h, Sáb: 7h-12h",
+    });
+    setHemoSuccess(null);
+    setHemoError(null);
+    window.scrollTo({ top: 350, behavior: "smooth" });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingHemoId(null);
+    setHemoForm({
+      nome: "",
+      tipo: "hemocentro",
+      estado: "PB",
+      cidade: "João Pessoa",
+      endereco: "",
+      telefone: "",
+      horario: "Seg-Sex: 7h30-17h, Sáb: 7h-12h"
+    });
   };
 
   const handleDeleteHemocentro = async (id: string, nome: string) => {
     if (!confirm(`Deseja realmente remover o cadastro de "${nome}"?`)) return;
     try {
       await deleteHemocentro(id);
+      if (editingHemoId === id) {
+        handleCancelEdit();
+      }
       loadHemocentros();
     } catch (err: any) {
       alert("Erro ao remover: " + err.message);
@@ -1240,20 +1282,25 @@ export default function AdminPage() {
                       width: "44px",
                       height: "44px",
                       borderRadius: "12px",
-                      background: "linear-gradient(135deg, #0284c7, #0369a1)",
+                      background: editingHemoId
+                        ? "linear-gradient(135deg, #f59e0b, #d97706)"
+                        : "linear-gradient(135deg, #0284c7, #0369a1)",
                       display: "grid",
                       placeItems: "center",
                       color: "#fff",
+                      transition: "background 0.3s ease",
                     }}
                   >
-                    <Plus size={22} />
+                    {editingHemoId ? <Pencil size={20} /> : <Plus size={22} />}
                   </div>
                   <div>
                     <h2 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#0f172a" }}>
-                      Cadastrar Novo Hemocentro / Ponto de Doação
+                      {editingHemoId ? "Editar Informações do Hemocentro" : "Cadastrar Novo Hemocentro / Ponto de Doação"}
                     </h2>
                     <p style={{ color: "#64748b", fontSize: "0.85rem" }}>
-                      Os hemocentros cadastrados aqui são salvos diretamente no SQLite (<code>hemoalerta.db</code>) e aparecem na busca pública para todos os doadores
+                      {editingHemoId
+                        ? `Atualizando registro ID: ${editingHemoId}. Modifique os campos abaixo e clique em Salvar Alterações.`
+                        : "Os hemocentros cadastrados aqui são salvos diretamente no SQLite (hemoalerta.db) e aparecem na busca pública para todos os doadores"}
                     </p>
                   </div>
                 </div>
@@ -1295,7 +1342,7 @@ export default function AdminPage() {
                   </div>
                 )}
 
-                <form onSubmit={handleAddHemocentro}>
+                <form onSubmit={handleSaveHemocentro}>
                   <div
                     style={{
                       display: "grid",
@@ -1448,27 +1495,62 @@ export default function AdminPage() {
                     </div>
                   </div>
 
-                  <button
-                    type="submit"
-                    disabled={hemoSubmitting}
-                    style={{
-                      background: "linear-gradient(135deg, #0284c7, #0369a1)",
-                      color: "#ffffff",
-                      border: "none",
-                      padding: "12px 28px",
-                      borderRadius: "10px",
-                      fontWeight: 700,
-                      fontSize: "0.95rem",
-                      cursor: "pointer",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      boxShadow: "0 4px 14px rgba(2, 132, 199, 0.3)",
-                    }}
-                  >
-                    <Plus size={18} />
-                    <span>{hemoSubmitting ? "Salvando no SQLite..." : "Salvar Hemocentro no Banco"}</span>
-                  </button>
+                  <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
+                    <button
+                      type="submit"
+                      disabled={hemoSubmitting}
+                      style={{
+                        background: editingHemoId
+                          ? "linear-gradient(135deg, #f59e0b, #d97706)"
+                          : "linear-gradient(135deg, #0284c7, #0369a1)",
+                        color: "#ffffff",
+                        border: "none",
+                        padding: "12px 28px",
+                        borderRadius: "10px",
+                        fontWeight: 700,
+                        fontSize: "0.95rem",
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        boxShadow: editingHemoId
+                          ? "0 4px 14px rgba(245, 158, 11, 0.3)"
+                          : "0 4px 14px rgba(2, 132, 199, 0.3)",
+                      }}
+                    >
+                      {editingHemoId ? <Check size={18} /> : <Plus size={18} />}
+                      <span>
+                        {hemoSubmitting
+                          ? "Salvando no SQLite..."
+                          : editingHemoId
+                          ? "Salvar Alterações"
+                          : "Salvar Hemocentro no Banco"}
+                      </span>
+                    </button>
+
+                    {editingHemoId && (
+                      <button
+                        type="button"
+                        onClick={handleCancelEdit}
+                        style={{
+                          background: "#f1f5f9",
+                          color: "#475569",
+                          border: "1px solid #cbd5e1",
+                          padding: "12px 20px",
+                          borderRadius: "10px",
+                          fontWeight: 600,
+                          fontSize: "0.9rem",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "6px",
+                        }}
+                      >
+                        <X size={16} />
+                        <span>Cancelar Edição</span>
+                      </button>
+                    )}
+                  </div>
                 </form>
               </div>
 
@@ -1583,7 +1665,28 @@ export default function AdminPage() {
                           </div>
                         </div>
 
-                        <div style={{ marginTop: "14px", paddingTop: "12px", borderTop: "1px solid #e2e8f0", display: "flex", justifyContent: "flex-end" }}>
+                        <div style={{ marginTop: "14px", paddingTop: "12px", borderTop: "1px solid #e2e8f0", display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+                          <button
+                            type="button"
+                            onClick={() => handleStartEdit(h)}
+                            style={{
+                              background: "#eff6ff",
+                              color: "#0284c7",
+                              border: "1px solid #bfdbfe",
+                              padding: "6px 12px",
+                              borderRadius: "6px",
+                              fontSize: "0.78rem",
+                              fontWeight: 600,
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "4px",
+                            }}
+                          >
+                            <Pencil size={13} />
+                            <span>Editar</span>
+                          </button>
+
                           <button
                             type="button"
                             onClick={() => handleDeleteHemocentro(h.id, h.nome)}

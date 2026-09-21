@@ -230,6 +230,20 @@ export async function deleteHemocentro(id: string): Promise<{ sucesso: boolean; 
   return resData;
 }
 
+export async function updateHemocentro(
+  id: string,
+  data: Partial<Hemocentro>
+): Promise<{ sucesso: boolean; mensagem: string; hemocentro: Hemocentro }> {
+  const res = await fetch(`${API_BASE_URL}/hemocentros/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  const resData = await res.json();
+  if (!res.ok) throw new Error(resData.detail || "Erro ao atualizar hemocentro");
+  return resData;
+}
+
 // ---------------- ADMIN & WHATSAPP VENOM API ----------------
 
 export interface WhatsAppStatus {
