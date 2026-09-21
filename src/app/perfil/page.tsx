@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { loginDonor, updateDonor, deleteDonor, Donor } from "@/services/api";
 import { User, Save, CheckCircle2, Trash2, LogOut } from "lucide-react";
+import ConfirmModal from "@/components/ConfirmModal";
 
 const TIPOS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "NS"];
 const UFS = [
@@ -18,6 +19,7 @@ export default function PerfilPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const handlePhoneInput = (val: string) => {
     const digits = val.replace(/\D/g, "").slice(0, 11);
@@ -76,12 +78,13 @@ export default function PerfilPage() {
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!donor) return;
-    if (!confirm("Tem certeza que deseja solicitar a exclusão de todos os seus dados? (Direito ao esquecimento LGPD)")) {
-      return;
-    }
+    setShowDeleteModal(true);
+  };
 
+  const confirmDelete = async () => {
+    if (!donor) return;
     setLoading(true);
     try {
       await deleteDonor(donor.id);
@@ -323,6 +326,27 @@ export default function PerfilPage() {
           </div>
         )}
       </div>
+
+      {/* Modal de Confirmação LGPD */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        title="Excluir Meus Dados (LGPD)"
+        type="danger"
+        confirmText="Sim, Excluir Definitivamente"
+        cancelText="Cancelar"
+        message={
+          <div>
+            <p>
+              Tem certeza que deseja solicitar a exclusão de todos os seus dados cadastrais no HemoAlerta?
+            </p>
+            <p style={{ marginTop: "8px", fontSize: "0.85rem", color: "#64748b" }}>
+              Esta ação exerce o seu <strong>Direito ao Esquecimento</strong> previsto na LGPD (Lei nº 13.709/2018). Todos os seus registros serão removidos permanentemente da nossa base de dados.
+            </p>
+          </div>
+        }
+        onConfirm={confirmDelete}
+        onClose={() => setShowDeleteModal(false)}
+      />
     </div>
   );
 }

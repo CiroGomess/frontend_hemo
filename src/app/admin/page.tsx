@@ -46,6 +46,7 @@ import {
   Pencil,
   X,
 } from "lucide-react";
+import ConfirmModal from "@/components/ConfirmModal";
 
 const UFS = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA",
@@ -104,6 +105,80 @@ export default function AdminPage() {
     telefone: "",
     horario: "Seg-Sex: 7h30-17h, Sáb: 7h-12h"
   });
+
+  // Modal de Confirmação & Alertas Modernos
+  const [modalConfig, setModalConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: React.ReactNode;
+    type: "danger" | "warning" | "info" | "success";
+    confirmText?: string;
+    cancelText?: string;
+    isAlertOnly?: boolean;
+    onConfirm?: () => void;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "info",
+    confirmText: "Confirmar",
+    cancelText: "Cancelar",
+    isAlertOnly: false,
+  });
+
+  const closeModal = () => {
+    setModalConfig((prev) => ({ ...prev, isOpen: false }));
+  };
+
+  const showConfirm = ({
+    title,
+    message,
+    type = "danger",
+    confirmText = "Confirmar",
+    cancelText = "Cancelar",
+    onConfirm,
+  }: {
+    title: string;
+    message: React.ReactNode;
+    type?: "danger" | "warning" | "info" | "success";
+    confirmText?: string;
+    cancelText?: string;
+    onConfirm: () => void;
+  }) => {
+    setModalConfig({
+      isOpen: true,
+      title,
+      message,
+      type,
+      confirmText,
+      cancelText,
+      isAlertOnly: false,
+      onConfirm,
+    });
+  };
+
+  const showAlert = ({
+    title,
+    message,
+    type = "info",
+    confirmText = "Entendido",
+  }: {
+    title: string;
+    message: React.ReactNode;
+    type?: "danger" | "warning" | "info" | "success";
+    confirmText?: string;
+  }) => {
+    setModalConfig({
+      isOpen: true,
+      title,
+      message,
+      type,
+      confirmText,
+      cancelText: "",
+      isAlertOnly: true,
+      onConfirm: () => {},
+    });
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("hemoalerta_admin_token");
@@ -196,23 +271,42 @@ export default function AdminPage() {
   };
 
   const handleDisconnect = async () => {
-    if (!confirm("Deseja realmente desconectar a sessão do WhatsApp?")) return;
-    setActionLoading(true);
-    try {
-      await disconnectWhatsApp();
-      setQrCodeImg(null);
-      setActionMessage("Sessão desconectada.");
-    } catch (err: any) {
-      setActionMessage("Erro: " + err.message);
-    } finally {
-      setActionLoading(false);
-    }
+    showConfirm({
+      title: "Desconectar WhatsApp",
+      type: "warning",
+      confirmText: "Sim, Desconectar",
+      cancelText: "Cancelar",
+      message: (
+        <div>
+          <p>Deseja realmente desconectar a sessão atual do WhatsApp?</p>
+          <p style={{ marginTop: "8px", fontSize: "0.84rem", color: "#64748b" }}>
+            Os disparos automáticos e notificações ficarão inativos até que uma nova conexão seja feita via QR Code.
+          </p>
+        </div>
+      ),
+      onConfirm: async () => {
+        setActionLoading(true);
+        try {
+          await disconnectWhatsApp();
+          setQrCodeImg(null);
+          setActionMessage("Sessão desconectada com sucesso.");
+        } catch (err: any) {
+          setActionMessage("Erro: " + err.message);
+        } finally {
+          setActionLoading(false);
+        }
+      },
+    });
   };
 
   const handleSendTest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!testPhone) {
-      alert("Informe o telefone com DDD.");
+      showAlert({
+        title: "Telefone Necessário",
+        message: "Por favor, informe o número do telefone com DDD para realizar o teste de envio.",
+        type: "info",
+      });
       return;
     }
     setTestLoading(true);
@@ -230,30 +324,66 @@ export default function AdminPage() {
   const handleBroadcast = async (e: React.FormEvent) => {
     e.preventDefault();
     if (waStatus.status !== "CONNECTED") {
-      alert("Conecte o WhatsApp do HemoAlerta antes de disparar alertas.");
-      return;
-    }
-
-    if (!confirm(`Confirmar disparo para todos os doadores compatíveis com ${alertTipo} em ${alertEstado}?`)) {
-      return;
-    }
-
-    setBroadcastLoading(true);
-    setBroadcastResult(null);
-    try {
-      const res = await broadcastWhatsAppAlert({
-        tipoSanguineo: alertTipo,
-        estado: alertEstado,
-        cidade: alertCidade,
-        hospital: alertHospital,
-        urgencia: alertUrgencia,
+      showAlert({
+        title: "WhatsApp Não Conectado",
+        message: "Conecte a instância do WhatsApp do HemoAlerta antes de efetuar disparos de emergência.",
+        type: "warning",
       });
-      setBroadcastResult(res);
-    } catch (err: any) {
-      alert("Erro ao disparar alerta: " + err.message);
-    } finally {
-      setBroadcastLoading(false);
+      return;
     }
+
+    showConfirm({
+      title: "Confirmar Disparo de Alerta SOS",
+      type: "warning",
+      confirmText: "Sim, Disparar Alertas",
+      cancelText: "Cancelar",
+      message: (
+        <div>
+          <p>
+            Deseja disparar alertas de urgência via WhatsApp para todos os doadores compatíveis com o tipo{" "}
+            <strong style={{ color: "#be123c", fontWeight: 800 }}>{alertTipo}</strong> no estado de{" "}
+            <strong>{alertEstado}</strong>?
+          </p>
+          <div
+            style={{
+              marginTop: "12px",
+              padding: "10px 12px",
+              background: "#f8fafc",
+              borderRadius: "8px",
+              border: "1px solid #e2e8f0",
+              fontSize: "0.82rem",
+              color: "#64748b",
+            }}
+          >
+            <div><strong>Hospital:</strong> {alertHospital || "Hemocentro de Referência"}</div>
+            <div><strong>Localização:</strong> {alertCidade}/{alertEstado}</div>
+            <div><strong>Nível de Urgência:</strong> {alertUrgencia}</div>
+          </div>
+        </div>
+      ),
+      onConfirm: async () => {
+        setBroadcastLoading(true);
+        setBroadcastResult(null);
+        try {
+          const res = await broadcastWhatsAppAlert({
+            tipoSanguineo: alertTipo,
+            estado: alertEstado,
+            cidade: alertCidade,
+            hospital: alertHospital,
+            urgencia: alertUrgencia,
+          });
+          setBroadcastResult(res);
+        } catch (err: any) {
+          showAlert({
+            title: "Erro no Disparo",
+            message: err.message || "Ocorreu uma falha ao tentar disparar o alerta.",
+            type: "danger",
+          });
+        } finally {
+          setBroadcastLoading(false);
+        }
+      },
+    });
   };
 
   const handleSaveHemocentro = async (e: React.FormEvent) => {
@@ -317,17 +447,38 @@ export default function AdminPage() {
     });
   };
 
-  const handleDeleteHemocentro = async (id: string, nome: string) => {
-    if (!confirm(`Deseja realmente remover o cadastro de "${nome}"?`)) return;
-    try {
-      await deleteHemocentro(id);
-      if (editingHemoId === id) {
-        handleCancelEdit();
-      }
-      loadHemocentros();
-    } catch (err: any) {
-      alert("Erro ao remover: " + err.message);
-    }
+  const handleDeleteHemocentro = (id: string, nome: string) => {
+    showConfirm({
+      title: "Excluir Hemocentro",
+      type: "danger",
+      confirmText: "Sim, Excluir",
+      cancelText: "Cancelar",
+      message: (
+        <div>
+          <p>
+            Deseja realmente remover o cadastro de <strong>"{nome}"</strong>?
+          </p>
+          <p style={{ marginTop: "8px", fontSize: "0.84rem", color: "#64748b" }}>
+            Esta unidade deixará de ser exibida na busca pública e na rede de hemocentros do sistema.
+          </p>
+        </div>
+      ),
+      onConfirm: async () => {
+        try {
+          await deleteHemocentro(id);
+          if (editingHemoId === id) {
+            handleCancelEdit();
+          }
+          loadHemocentros();
+        } catch (err: any) {
+          showAlert({
+            title: "Erro ao Excluir",
+            message: err.message || "Não foi possível remover o hemocentro.",
+            type: "danger",
+          });
+        }
+      },
+    });
   };
 
   const filteredHemocentros = hemocentros.filter((h) => {
@@ -1717,6 +1868,19 @@ export default function AdminPage() {
           )}
         </div>
       )}
+
+      {/* Modal de Confirmação & Alertas Modernos */}
+      <ConfirmModal
+        isOpen={modalConfig.isOpen}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        type={modalConfig.type}
+        confirmText={modalConfig.confirmText}
+        cancelText={modalConfig.cancelText}
+        isAlertOnly={modalConfig.isAlertOnly}
+        onConfirm={modalConfig.onConfirm}
+        onClose={closeModal}
+      />
     </div>
   );
 }

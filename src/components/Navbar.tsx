@@ -67,10 +67,6 @@ export default function Navbar() {
         <Link href="/perfil" className={`tab ${pathname === "/perfil" ? "is-active" : ""}`}>
           Meu Perfil
         </Link>
-        <Link href="/admin" className={`tab ${pathname === "/admin" ? "is-active" : ""}`} style={{ color: "#d71e3a", fontWeight: 700 }}>
-          <Shield size={15} style={{ marginRight: "4px", verticalAlign: "middle" }} />
-          ADM
-        </Link>
         <Link href="/emergencia" className="tab-sos">
           <Siren size={16} />
           <span>Emergência SOS</span>
