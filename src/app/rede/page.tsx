@@ -81,7 +81,7 @@ export default function RedePage() {
         {/* Grid de Estados */}
         <div className="rede-grid" id="redeGrid">
           {UFS.map((uf) => {
-            const count = stats?.distribuicaoPorEstado[uf] || 0;
+            const count = stats?.distribuicaoPorEstado?.[uf] || 0;
             let level = 0;
             if (count > 0 && count <= 4) level = 1;
             else if (count >= 5 && count <= 9) level = 2;

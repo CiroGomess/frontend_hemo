@@ -222,8 +222,12 @@ export default function DoadoresPage() {
                       <div className="empty__drop" aria-hidden="true" style={{ display: "grid", placeItems: "center" }}>
                         <Droplet size={36} color="var(--blood)" fill="var(--blood)" />
                       </div>
-                      <h3>Nenhum resultado</h3>
-                      <p>Ajuste a busca ou o filtro de tipo sanguíneo.</p>
+                      <h3>{search || tipo ? "Nenhum resultado" : "Nenhum doador cadastrado ainda"}</h3>
+                      <p>
+                        {search || tipo
+                          ? "Ajuste a busca ou o filtro de tipo sanguíneo."
+                          : "Os voluntários aparecerão aqui em tempo real assim que realizarem o cadastro. Vá até a aba Cadastro para começar."}
+                      </p>
                     </div>
                   </td>
                 </tr>

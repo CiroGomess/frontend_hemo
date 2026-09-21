@@ -6,11 +6,11 @@ export const revalidate = 0;
 
 export default async function HomePage() {
   let stats = {
-    totalDoadores: 28,
-    doadoresAtivos: 23,
-    vidasSalvasEstimadas: 112,
-    doadoresUniversais: 3,
-    estadosAtivos: 12,
+    totalDoadores: 0,
+    doadoresAtivos: 0,
+    vidasSalvasEstimadas: 0,
+    doadoresUniversais: 0,
+    estadosAtivos: 0,
   };
 
   try {
