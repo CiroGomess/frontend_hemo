@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+:root {
+  --blood: #d71e3a;
+  --blood-bright: #ff3d5a;
+  --blood-dark: #8b0000;
+  --blood-deep: #5a0a15;
+  --blood-fade: rgba(215, 30, 58, 0.12);
+  --blood-light: #f8e8ec;
+  --plasma: #f2b705;
+  --ink: #1c1418;
+  --ink-muted: #64748b;
+  --paper: #fcf8f7;
+  --surface: #ffffff;
+  --border: #f1e2e5;
+}
+
+body {
+  background-color: var(--paper);
+  color: var(--ink);
+  min-height: 100vh;
+}
+
+/* Utilitários visuais de sangue e selos */
+.bg-blood-gradient {
+  background: linear-gradient(135deg, #d71e3a 0%, #8b0000 100%);
+}
+
+.text-blood {
+  color: var(--blood);
+}
+
+.bg-blood {
+  background-color: var(--blood);
+}
+
+.badge-blood {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  background-color: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(215, 30, 58, 0.12);
+}
