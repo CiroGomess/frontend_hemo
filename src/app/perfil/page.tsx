@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { loginDonor, updateDonor, deleteDonor, Donor } from "@/services/api";
+import { User, Save, CheckCircle2, Trash2, LogOut } from "lucide-react";
 
 const TIPOS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "NS"];
 const UFS = [
@@ -22,13 +23,8 @@ export default function PerfilPage() {
     const digits = val.replace(/\D/g, "").slice(0, 11);
     let out = "";
     if (digits.length > 0) out = "(" + digits.slice(0, 2);
-    if (digits.length >= 2) out += ") ";
-    if (digits.length > 2) {
-      const rest = digits.slice(2);
-      if (rest.length <= 4) out += rest;
-      else if (rest.length <= 8) out += rest.slice(0, 4) + "-" + rest.slice(4);
-      else out += rest.slice(0, 5) + "-" + rest.slice(5);
-    }
+    if (digits.length > 2) out += ") " + digits.slice(2, 7);
+    if (digits.length > 7) out += "-" + digits.slice(7);
     return out;
   };
 
@@ -37,13 +33,8 @@ export default function PerfilPage() {
     setError(null);
     setSuccess(null);
 
-    if (!email || !email.includes("@")) {
-      setError("E-mail inválido");
-      return;
-    }
-    const cleanPhone = telefone.replace(/\D/g, "");
-    if (!cleanPhone || cleanPhone.length < 10) {
-      setError("Telefone inválido");
+    if (!email.trim() || !telefone.trim()) {
+      setError("Preencha e-mail e WhatsApp para consultar o perfil.");
       return;
     }
 
@@ -51,7 +42,7 @@ export default function PerfilPage() {
     try {
       const data = await loginDonor(email, telefone);
       setDonor(data);
-      setSuccess(`✓ Bem-vindo, ${data.nomeCompleto}!`);
+      setSuccess(`Bem-vindo, ${data.nomeCompleto}!`);
     } catch (err: any) {
       setError(err.message || "Doador não encontrado. Verifique e-mail e telefone.");
     } finally {
@@ -77,7 +68,7 @@ export default function PerfilPage() {
         ultimaDoacao: donor.ultimaDoacao,
         optInAlertas: donor.optInAlertas,
       });
-      setSuccess("✓ Perfil atualizado com sucesso!");
+      setSuccess("Perfil atualizado com sucesso!");
     } catch (err: any) {
       setError(err.message || "Erro ao atualizar dados.");
     } finally {
@@ -113,7 +104,10 @@ export default function PerfilPage() {
           <div id="perfilLogin" style={{ display: "block" }}>
             <div className="panel__head">
               <div>
-                <h2>👤 Meu Perfil</h2>
+                <h2 style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <User size={22} color="var(--blood)" />
+                  <span>Meu Perfil</span>
+                </h2>
                 <p>Acesse seu perfil de doador usando email e telefone</p>
               </div>
             </div>
@@ -319,8 +313,9 @@ export default function PerfilPage() {
                 </div>
 
                 <div className="form__actions" style={{ marginTop: "24px" }}>
-                  <button type="submit" disabled={loading} className="btn btn--primary">
-                    💾 Salvar Alterações
+                  <button type="submit" disabled={loading} className="btn btn--primary" style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                    <Save size={16} />
+                    <span>{loading ? "Salvando..." : "Salvar Alterações"}</span>
                   </button>
                 </div>
               </form>

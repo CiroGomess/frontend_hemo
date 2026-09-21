@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { fetchStats } from "@/services/api";
+import { Star, CheckCircle2 } from "lucide-react";
 
 export const revalidate = 0;
 
@@ -490,7 +491,11 @@ export default async function HomePage() {
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "40px" }}>
             <div style={{ padding: "40px", background: "white", borderRadius: "16px", border: "1px solid rgba(28, 20, 24, 0.1)" }}>
-              <div style={{ color: "#d71e3a", fontSize: "1.5rem", marginBottom: "16px" }}>★★★★★</div>
+              <div style={{ display: "flex", gap: "4px", color: "#d71e3a", marginBottom: "16px" }}>
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} size={18} fill="#d71e3a" color="#d71e3a" />
+                ))}
+              </div>
               <p style={{ color: "#1c1418", marginBottom: "24px", lineHeight: 1.7 }}>
                 &ldquo;Meu filho precisava urgentemente de sangue. HemoAlerta nos ajudou a encontrar doadores em 20 minutos. Salvou a vida dele.&rdquo;
               </p>
@@ -499,7 +504,11 @@ export default async function HomePage() {
             </div>
 
             <div style={{ padding: "40px", background: "white", borderRadius: "16px", border: "1px solid rgba(28, 20, 24, 0.1)" }}>
-              <div style={{ color: "#d71e3a", fontSize: "1.5rem", marginBottom: "16px" }}>★★★★★</div>
+              <div style={{ display: "flex", gap: "4px", color: "#d71e3a", marginBottom: "16px" }}>
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} size={18} fill="#d71e3a" color="#d71e3a" />
+                ))}
+              </div>
               <p style={{ color: "#1c1418", marginBottom: "24px", lineHeight: 1.7 }}>
                 &ldquo;Como doador, fiquei surpreso com o impacto direto. Saber que minha doação salvou 4 vidas é transformador.&rdquo;
               </p>
@@ -508,7 +517,11 @@ export default async function HomePage() {
             </div>
 
             <div style={{ padding: "40px", background: "white", borderRadius: "16px", border: "1px solid rgba(28, 20, 24, 0.1)" }}>
-              <div style={{ color: "#d71e3a", fontSize: "1.5rem", marginBottom: "16px" }}>★★★★★</div>
+              <div style={{ display: "flex", gap: "4px", color: "#d71e3a", marginBottom: "16px" }}>
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} size={18} fill="#d71e3a" color="#d71e3a" />
+                ))}
+              </div>
               <p style={{ color: "#1c1418", marginBottom: "24px", lineHeight: 1.7 }}>
                 &ldquo;A plataforma é segura e tranquila. Recomendo para todos que querem ajudar sem burocracias.&rdquo;
               </p>
@@ -644,8 +657,9 @@ export default async function HomePage() {
           >
             Cadastrar Agora
           </Link>
-          <p style={{ marginTop: "40px", opacity: 0.7, fontSize: "0.95rem" }}>
-            ✓ 100% seguro e voluntário • Sem compromissos
+          <p style={{ marginTop: "40px", opacity: 0.85, fontSize: "0.95rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+            <CheckCircle2 size={18} color="#42b881" />
+            <span>100% seguro e voluntário • Sem compromissos</span>
           </p>
         </div>
       </div>

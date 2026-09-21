@@ -17,7 +17,7 @@ const hanken = Hanken_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "HemoAlerta — Rede Inteligente de Doação de Sangue",
+  title: "HemoAlerta — Cadastro de Doador",
   description: "Conectamos doadores de sangue compatíveis a hemocentros e hospitais em momentos de emergência com total respeito à LGPD.",
 };
 
@@ -27,10 +27,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="pt-BR" className={`${bricolage.variable} ${hanken.variable} h-full`}>
-      <body className="min-h-full flex flex-col font-sans bg-[#fcf8f7] text-[#1c1418] antialiased">
+    <html lang="pt-BR" className={`${bricolage.variable} ${hanken.variable}`}>
+      <body style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+        <div className="bg-grain" aria-hidden="true"></div>
         <Navbar />
-        <main className="flex-1">{children}</main>
+        <main style={{ flex: 1 }}>{children}</main>
         <Footer />
       </body>
     </html>

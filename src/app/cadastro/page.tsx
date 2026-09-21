@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { createDonor } from "@/services/api";
+import { CheckCircle2, AlertCircle, ArrowRight, ShieldCheck } from "lucide-react";
+import LgpdModal from "@/components/LgpdModal";
 
 const UFS = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA",
@@ -22,65 +24,54 @@ export default function CadastroPage() {
     lgpd: true,
   });
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const maskWhatsapp = (value: string) => {
-    const digits = (value || "").replace(/\D/g, "").slice(0, 11);
-    let out = "";
-    if (digits.length > 0) out = "(" + digits.slice(0, 2);
-    if (digits.length >= 2) out += ") ";
-    if (digits.length > 2) {
-      const rest = digits.slice(2);
-      if (rest.length <= 4) out += rest;
-      else if (rest.length <= 8) out += rest.slice(0, 4) + "-" + rest.slice(4);
-      else out += rest.slice(0, 5) + "-" + rest.slice(5);
-    }
-    return out;
-  };
+  const [showLgpdModal, setShowLgpdModal] = useState(false);
 
   const handlePhoneInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const masked = maskWhatsapp(e.target.value);
-    setFormData((prev) => ({ ...prev, whatsapp: masked }));
-    if (errors.whatsapp) setErrors((prev) => ({ ...prev, whatsapp: "" }));
+    let v = e.target.value.replace(/\D/g, "");
+    if (v.length > 11) v = v.slice(0, 11);
+
+    if (v.length > 6) {
+      v = `(${v.slice(0, 2)}) ${v.slice(2, 7)}-${v.slice(7)}`;
+    } else if (v.length > 2) {
+      v = `(${v.slice(0, 2)}) ${v.slice(2)}`;
+    } else if (v.length > 0) {
+      v = `(${v}`;
+    }
+    setFormData({ ...formData, whatsapp: v });
   };
 
   const validate = () => {
     const errs: Record<string, string> = {};
     if (!formData.nome.trim() || formData.nome.trim().length < 3) {
-      errs.nome = "Informe o nome completo.";
+      errs.nome = "Informe seu nome completo (mínimo 3 caracteres).";
     }
     if (!formData.tipo) {
-      errs.tipo = "Selecione o tipo sanguíneo.";
+      errs.tipo = "Selecione o tipo sanguíneo (ou 'Não sei').";
     }
-    if (!formData.cidade.trim()) {
-      errs.cidade = "Informe a cidade.";
+    if (!formData.cidade.trim() || formData.cidade.trim().length < 2) {
+      errs.cidade = "Informe sua cidade.";
     }
     if (!formData.estado) {
-      errs.estado = "UF.";
+      errs.estado = "Selecione a UF.";
     }
-    const digits = formData.whatsapp.replace(/\D/g, "");
-    if (digits.length < 10 || digits.length > 11) {
-      errs.whatsapp = "WhatsApp inválido. Use DDD + número.";
+
+    const rawPhone = formData.whatsapp.replace(/\D/g, "");
+    if (!rawPhone || (rawPhone.length !== 10 && rawPhone.length !== 11)) {
+      errs.whatsapp = "WhatsApp inválido. Use (DDD) + 8 ou 9 dígitos.";
     }
+
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       errs.email = "E-mail inválido.";
     }
-    if (formData.nascimento) {
-      const nasc = new Date(formData.nascimento);
-      const hoje = new Date();
-      let a = hoje.getFullYear() - nasc.getFullYear();
-      if (hoje.getMonth() < nasc.getMonth() || (hoje.getMonth() === nasc.getMonth() && hoje.getDate() < nasc.getDate())) a--;
-      if (a < 16) errs.nascimento = "Doadores devem ter ao menos 16 anos.";
-      else if (a > 120) errs.nascimento = "Data de nascimento inválida.";
-      if (nasc > hoje) errs.nascimento = "Data não pode ser no futuro.";
-    }
+
     if (!formData.optIn) {
-      errs.optIn = "É necessário aceitar o recebimento de alertas.";
+      errs.optIn = "É necessário aceitar os alertas para participar da rede.";
     }
     if (!formData.lgpd) {
-      errs.lgpd = "É necessário concordar com a LGPD.";
+      errs.lgpd = "O consentimento LGPD é obrigatório pela Lei nº 13.709/2018.";
     }
 
     setErrors(errs);
@@ -89,13 +80,13 @@ export default function CadastroPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSuccess(null);
     if (!validate()) return;
 
     setLoading(true);
+    setSuccess(null);
     try {
       await createDonor({
-        nomeCompleto: formData.nome,
+        nomeCompleto: formData.nome.trim(),
         tipoSanguineo: formData.tipo,
         dataNascimento: formData.nascimento || undefined,
         cidade: formData.cidade,
@@ -107,7 +98,7 @@ export default function CadastroPage() {
         consentimentoLGPD: formData.lgpd,
       });
 
-      setSuccess("Cadastro confirmado! Obrigado por salvar vidas. 🩸");
+      setSuccess("Cadastro confirmado com sucesso! Obrigado por salvar vidas.");
       setFormData({
         nome: "",
         tipo: "",
@@ -180,14 +171,44 @@ export default function CadastroPage() {
           </div>
 
           {success && (
-            <div style={{ background: "#e7f4ec", border: "1px solid #1e7a4d", color: "#1e7a4d", padding: "12px 16px", borderRadius: "10px", marginTop: "16px", fontWeight: 600, fontSize: "0.95rem" }}>
-              ✓ {success}
+            <div
+              style={{
+                background: "#e7f4ec",
+                border: "1px solid #1e7a4d",
+                color: "#1e7a4d",
+                padding: "12px 16px",
+                borderRadius: "10px",
+                marginTop: "16px",
+                fontWeight: 600,
+                fontSize: "0.95rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+              <CheckCircle2 size={18} />
+              <span>{success}</span>
             </div>
           )}
 
           {errors.global && (
-            <div style={{ background: "#fff1f3", border: "1px solid #d71e3a", color: "#d71e3a", padding: "12px 16px", borderRadius: "10px", marginTop: "16px", fontWeight: 600, fontSize: "0.95rem" }}>
-              ⚠️ {errors.global}
+            <div
+              style={{
+                background: "#fff1f3",
+                border: "1px solid #d71e3a",
+                color: "#d71e3a",
+                padding: "12px 16px",
+                borderRadius: "10px",
+                marginTop: "16px",
+                fontWeight: 600,
+                fontSize: "0.95rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+              <AlertCircle size={18} />
+              <span>{errors.global}</span>
             </div>
           )}
 
@@ -224,14 +245,14 @@ export default function CadastroPage() {
                     <option value="AB-">AB−</option>
                     <option value="O+">O+</option>
                     <option value="O-">O−</option>
-                    <option value="NS">Não sei</option>
+                    <option value="NS">Não sei meu tipo</option>
                   </select>
                 </div>
                 {errors.tipo && <small className="error">{errors.tipo}</small>}
               </div>
 
-              <div className={`field ${errors.nascimento ? "has-error" : ""}`}>
-                <label htmlFor="nascimento">Data de nascimento</label>
+              <div className="field">
+                <label htmlFor="nascimento">Data de nascimento <span className="opt">(opcional)</span></label>
                 <input
                   type="date"
                   id="nascimento"
@@ -239,7 +260,6 @@ export default function CadastroPage() {
                   value={formData.nascimento}
                   onChange={(e) => setFormData({ ...formData, nascimento: e.target.value })}
                 />
-                {errors.nascimento && <small className="error">{errors.nascimento}</small>}
               </div>
             </div>
 
@@ -266,7 +286,7 @@ export default function CadastroPage() {
                     value={formData.estado}
                     onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
                   >
-                    <option value="" disabled>—</option>
+                    <option value="" disabled>UF</option>
                     {UFS.map((uf) => (
                       <option key={uf} value={uf}>{uf}</option>
                     ))}
@@ -319,6 +339,7 @@ export default function CadastroPage() {
             </div>
 
             <div className="consents">
+              {/* Checkbox 1: Apenas WhatsApp */}
               <label className="check">
                 <input
                   type="checkbox"
@@ -329,12 +350,13 @@ export default function CadastroPage() {
                 />
                 <span className="check__box" aria-hidden="true"></span>
                 <span className="check__label">
-                  Aceito receber <strong>alertas de doação</strong> por WhatsApp/e-mail quando meu
+                  Aceito receber <strong>alertas de doação</strong> por WhatsApp quando meu
                   tipo sanguíneo estiver em falta. <span className="req">*</span>
                 </span>
               </label>
               {errors.optIn && <small className="error">{errors.optIn}</small>}
 
+              {/* Checkbox 2: LGPD com link para modal dedicado */}
               <label className="check">
                 <input
                   type="checkbox"
@@ -346,7 +368,18 @@ export default function CadastroPage() {
                 <span className="check__box" aria-hidden="true"></span>
                 <span className="check__label">
                   Li e concordo com o tratamento dos meus dados conforme a <strong>LGPD</strong>
-                  (consentimento, criptografia e retenção máxima de 5 anos). <span className="req">*</span>
+                  {" "}(consentimento, criptografia e retenção máxima de 5 anos).{" "}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setShowLgpdModal(true);
+                    }}
+                    className="btn-link-lgpd"
+                  >
+                    (Ler Política Completa)
+                  </button>
+                  <span className="req">*</span>
                 </span>
               </label>
               {errors.lgpd && <small className="error">{errors.lgpd}</small>}
@@ -354,17 +387,26 @@ export default function CadastroPage() {
 
             <div className="form__actions">
               <button type="reset" className="btn btn--ghost" disabled={loading}>Limpar</button>
-              <button type="submit" className="btn btn--primary" disabled={loading}>
-                {loading ? "Gravando..." : "Confirmar cadastro"}
-                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-                  <path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="2"
-                    strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+              <button
+                type="submit"
+                className="btn btn--primary"
+                disabled={loading}
+                style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}
+              >
+                <span>{loading ? "Gravando..." : "Confirmar cadastro"}</span>
+                <ArrowRight size={18} />
               </button>
             </div>
           </form>
         </div>
       </div>
+
+      {/* Modal Dedicado LGPD */}
+      <LgpdModal
+        isOpen={showLgpdModal}
+        onClose={() => setShowLgpdModal(false)}
+        onAccept={() => setFormData((prev) => ({ ...prev, lgpd: true }))}
+      />
     </div>
   );
 }

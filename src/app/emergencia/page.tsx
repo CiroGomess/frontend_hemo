@@ -1,8 +1,9 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { checkCompatibility, sendEmergency, CompatibilityResponse, EmergencyResponse } from "@/services/api";
+import { sendEmergency, checkCompatibility, EmergencyResponse } from "@/services/api";
+import { Siren, Zap, Globe, Activity, Droplet, MapPin, Phone, CheckCircle2, MessageSquare, AlertTriangle, ArrowRight } from "lucide-react";
 
 const TIPOS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 const UFS = [
@@ -10,73 +11,77 @@ const UFS = [
   "PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"
 ];
 
+function maskPhone(v: string) {
+  let clean = v.replace(/\D/g, "");
+  if (clean.length > 11) clean = clean.slice(0, 11);
+  if (clean.length > 6) return `(${clean.slice(0, 2)}) ${clean.slice(2, 7)}-${clean.slice(7)}`;
+  if (clean.length > 2) return `(${clean.slice(0, 2)}) ${clean.slice(2)}`;
+  if (clean.length > 0) return `(${clean}`;
+  return "";
+}
+
 function EmergenciaContent() {
   const searchParams = useSearchParams();
-  const initialEstado = searchParams.get("estado") || "SP";
+  const ufParam = searchParams.get("estado") || "";
 
   const [formData, setFormData] = useState({
     ajudaTipo: "O+",
     ajudaQuantidade: 1,
     ajudaUrgencia: "CRÍTICA",
     ajudaCidade: "São Paulo",
-    ajudaEstado: initialEstado,
+    ajudaEstado: ufParam || "SP",
     ajudaPaciente: "",
     ajudaContato: "",
     ajudaMensagem: "",
   });
 
-  const [compatibility, setCompatibility] = useState<CompatibilityResponse | null>(null);
-  const [createdEmergency, setCreatedEmergency] = useState<EmergencyResponse | null>(null);
+  const [compatibility, setCompatibility] = useState<{ totalAptos: number; tiposCompativeis: string[] } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [createdEmergency, setCreatedEmergency] = useState<EmergencyResponse | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
+    if (ufParam) {
+      setFormData((prev) => ({ ...prev, ajudaEstado: ufParam }));
+    }
+  }, [ufParam]);
+
+  useEffect(() => {
     if (formData.ajudaTipo && formData.ajudaEstado) {
-      checkCompatibility(formData.ajudaTipo, formData.ajudaEstado, formData.ajudaCidade)
-        .then((res) => setCompatibility(res))
+      checkCompatibility(
+        formData.ajudaTipo,
+        formData.ajudaEstado,
+        formData.ajudaCidade || undefined
+      )
+        .then((data) => setCompatibility(data))
         .catch(() => {});
     }
   }, [formData.ajudaTipo, formData.ajudaEstado, formData.ajudaCidade]);
 
-  const maskPhone = (val: string) => {
-    const digits = val.replace(/\D/g, "").slice(0, 11);
-    let out = "";
-    if (digits.length > 0) out = "(" + digits.slice(0, 2);
-    if (digits.length >= 2) out += ") ";
-    if (digits.length > 2) {
-      const rest = digits.slice(2);
-      if (rest.length <= 4) out += rest;
-      else if (rest.length <= 8) out += rest.slice(0, 4) + "-" + rest.slice(4);
-      else out += rest.slice(0, 5) + "-" + rest.slice(5);
-    }
-    return out;
-  };
-
-  const validate = () => {
-    const errs: Record<string, string> = {};
-    if (!formData.ajudaTipo) errs.ajudaTipo = "Selecione o tipo sanguíneo.";
-    if (!formData.ajudaQuantidade || formData.ajudaQuantidade < 1) errs.ajudaQuantidade = "Informe a quantidade.";
-    if (!formData.ajudaCidade.trim()) errs.ajudaCidade = "Informe a cidade.";
-    if (!formData.ajudaEstado) errs.ajudaEstado = "Selecione o estado.";
-    if (!formData.ajudaPaciente.trim()) errs.ajudaPaciente = "Informe o paciente/instituição.";
-    if (!formData.ajudaUrgencia) errs.ajudaUrgencia = "Selecione o nível de urgência.";
-    const digits = formData.ajudaContato.replace(/\D/g, "");
-    if (digits.length < 10 || digits.length > 11) errs.ajudaContato = "Telefone inválido.";
-
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
+    const errs: Record<string, string> = {};
+
+    if (!formData.ajudaTipo) errs.ajudaTipo = "Selecione o tipo de sangue.";
+    if (!formData.ajudaQuantidade || formData.ajudaQuantidade < 1) errs.ajudaQuantidade = "Quantidade mínima é 1 bolsa.";
+    if (!formData.ajudaCidade.trim()) errs.ajudaCidade = "Informe a cidade.";
+    if (!formData.ajudaEstado) errs.ajudaEstado = "Selecione a UF.";
+    if (!formData.ajudaPaciente.trim()) errs.ajudaPaciente = "Informe o paciente ou instituição.";
+    if (!formData.ajudaContato.trim()) errs.ajudaContato = "Informe o telefone de contato.";
+
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      return;
+    }
 
     setLoading(true);
+    setToastMsg(null);
+
     try {
       const res = await sendEmergency({
         tipo: formData.ajudaTipo,
-        quantidade: Number(formData.ajudaQuantidade),
+        quantidade: formData.ajudaQuantidade,
         paciente: formData.ajudaPaciente,
         cidade: formData.ajudaCidade,
         estado: formData.ajudaEstado,
@@ -86,7 +91,7 @@ function EmergenciaContent() {
       });
 
       setCreatedEmergency(res.emergencia);
-      setToastMsg("🆘 Alertas enviados para doadores da região! 🙏");
+      setToastMsg("Alertas emitidos para os doadores compatíveis da região!");
       setErrors({});
     } catch (err: any) {
       setToastMsg("Erro ao processar alerta: " + err.message);
@@ -95,21 +100,16 @@ function EmergenciaContent() {
     }
   };
 
-  const urgenciaEmoji = {
-    "CRÍTICA": "🔴",
-    "ALTA": "🟠",
-    "MÉDIA": "🟡"
-  }[formData.ajudaUrgencia] || "🔴";
-
-  const previewMessage = `${urgenciaEmoji} ALERTA DE DOAÇÃO
-Tipo sanguíneo: ${formData.ajudaTipo}
-Quantidade: ${formData.ajudaQuantidade} bolsa${formData.ajudaQuantidade > 1 ? "s" : ""}
-Paciente: ${formData.ajudaPaciente || "[Paciente / Instituição]"}
+  const previewMessage = `[ALERTA DE EMERGÊNCIA — HEMOALERTA]
+Nível de Urgência: ${formData.ajudaUrgencia}
+Tipo sanguíneo necessário: ${formData.ajudaTipo}
+Quantidade de bolsas: ${formData.ajudaQuantidade} bolsa(s)
+Paciente / Unidade: ${formData.ajudaPaciente || "[Paciente / Instituição]"}
 Local: ${formData.ajudaCidade}, ${formData.ajudaEstado}
 Contato: ${formData.ajudaContato || "[Telefone]"}
-${formData.ajudaMensagem ? "\nDetalhes: " + formData.ajudaMensagem : ""}
+${formData.ajudaMensagem ? "\nObservações: " + formData.ajudaMensagem : ""}
 
-Você pode salvar vidas! Responda SIM para ajudar.`;
+Sua doação pode salvar vidas neste momento! Responda SIM para confirmar disponibilidade.`;
 
   return (
     <div style={{ maxWidth: "1180px", margin: "0 auto", padding: "clamp(20px, 4vw, 40px)" }}>
@@ -124,39 +124,41 @@ Você pode salvar vidas! Responda SIM para ajudar.`;
           textAlign: "center",
         }}
       >
-        <h2 style={{ fontSize: "2.2rem", fontWeight: 800, marginBottom: "12px", fontFamily: "var(--font-display)" }}>
-          🆘 Chamar Doadores
+        <h2 style={{ fontSize: "2.2rem", fontWeight: 800, marginBottom: "12px", fontFamily: "var(--font-display)", display: "flex", alignItems: "center", justifyContent: "center", gap: "12px" }}>
+          <Siren size={36} color="var(--blood-bright)" />
+          <span>Chamar Doadores em Emergência</span>
         </h2>
         <p style={{ fontSize: "1.05rem", marginBottom: "16px", opacity: 0.95 }}>
           Solicite doadores de sangue na sua região quando houver urgência. A rede HemoAlerta o conectará aos doadores voluntários cadastrados.
         </p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px", marginTop: "24px" }}>
-          <div style={{ background: "rgba(255,255,255,0.1)", padding: "12px", borderRadius: "10px" }}>
-            <div style={{ fontSize: "1.8rem", marginBottom: "4px" }}>⚡</div>
-            <div style={{ fontSize: "0.85rem", fontWeight: 500 }}>Alertas Instantâneos</div>
+          <div style={{ background: "rgba(255,255,255,0.1)", padding: "16px", borderRadius: "10px", display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+            <Zap size={28} color="#f2b705" />
+            <div style={{ fontSize: "0.85rem", fontWeight: 600 }}>Alertas Instantâneos</div>
           </div>
-          <div style={{ background: "rgba(255,255,255,0.1)", padding: "12px", borderRadius: "10px" }}>
-            <div style={{ fontSize: "1.8rem", marginBottom: "4px" }}>🗺️</div>
-            <div style={{ fontSize: "0.85rem", fontWeight: 500 }}>Por Região</div>
+          <div style={{ background: "rgba(255,255,255,0.1)", padding: "16px", borderRadius: "10px", display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+            <Globe size={28} color="#42b881" />
+            <div style={{ fontSize: "0.85rem", fontWeight: 600 }}>Segmentação por Região</div>
           </div>
-          <div style={{ background: "rgba(255,255,255,0.1)", padding: "12px", borderRadius: "10px" }}>
-            <div style={{ fontSize: "1.8rem", marginBottom: "4px" }}>💪</div>
-            <div style={{ fontSize: "0.85rem", fontWeight: 500 }}>Voluntários Ativos</div>
+          <div style={{ background: "rgba(255,255,255,0.1)", padding: "16px", borderRadius: "10px", display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+            <Activity size={28} color="#ff3d5a" />
+            <div style={{ fontSize: "0.85rem", fontWeight: 600 }}>Voluntários Aptos</div>
           </div>
         </div>
       </div>
 
       {toastMsg && (
-        <div style={{ background: "#e7f4ec", border: "1px solid #1e7a4d", color: "#1e7a4d", padding: "14px 20px", borderRadius: "12px", marginBottom: "24px", fontWeight: 700 }}>
-          {toastMsg}
+        <div style={{ background: "#e7f4ec", border: "1px solid #1e7a4d", color: "#1e7a4d", padding: "14px 20px", borderRadius: "12px", marginBottom: "24px", fontWeight: 700, display: "flex", alignItems: "center", gap: "8px" }}>
+          <CheckCircle2 size={20} />
+          <span>{toastMsg}</span>
         </div>
       )}
 
       <div className="panel">
         <div className="panel__head">
           <div>
-            <h2>Formulário de Solicitação</h2>
-            <p>Preencha os detalhes abaixo para mobilizar a rede de doadores.</p>
+            <h2>Formulário de Solicitação SOS</h2>
+            <p>Preencha os detalhes abaixo para mobilizar a rede de doadores compatíveis.</p>
           </div>
         </div>
 
@@ -164,8 +166,8 @@ Você pode salvar vidas! Responda SIM para ajudar.`;
           <form onSubmit={handleSubmit} className="form" noValidate>
             {/* Seção 1: Sangue & Urgência */}
             <div style={{ marginBottom: "32px" }}>
-              <h3 style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--blood)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "16px", paddingBottom: "8px", borderBottom: "2px solid var(--blood-fade)" }}>
-                🩸 Tipo de Sangue & Urgência
+              <h3 style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--blood)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "16px", paddingBottom: "8px", borderBottom: "2px solid var(--blood-fade)", display: "flex", alignItems: "center", gap: "8px" }}>
+                <Droplet size={18} color="var(--blood)" /> Tipo de Sangue & Urgência
               </h3>
 
               <div className="grid-2">
@@ -208,9 +210,9 @@ Você pode salvar vidas! Responda SIM para ajudar.`;
                       value={formData.ajudaUrgencia}
                       onChange={(e) => setFormData({ ...formData, ajudaUrgencia: e.target.value })}
                     >
-                      <option value="CRÍTICA">🔴 Crítica (Até 6 horas)</option>
-                      <option value="ALTA">🟠 Alta (Até 24 horas)</option>
-                      <option value="MÉDIA">🟡 Média (Agendamento urgente)</option>
+                      <option value="CRÍTICA">Crítica (Até 6 horas)</option>
+                      <option value="ALTA">Alta (Até 24 horas)</option>
+                      <option value="MÉDIA">Média (Agendamento urgente)</option>
                     </select>
                   </div>
                   {errors.ajudaUrgencia && <small className="error">{errors.ajudaUrgencia}</small>}
@@ -220,8 +222,8 @@ Você pode salvar vidas! Responda SIM para ajudar.`;
 
             {/* Seção 2: Localização & Paciente */}
             <div style={{ marginBottom: "32px" }}>
-              <h3 style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--blood)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "16px", paddingBottom: "8px", borderBottom: "2px solid var(--blood-fade)" }}>
-                📍 Localização & Paciente
+              <h3 style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--blood)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "16px", paddingBottom: "8px", borderBottom: "2px solid var(--blood-fade)", display: "flex", alignItems: "center", gap: "8px" }}>
+                <MapPin size={18} color="var(--blood)" /> Localização & Paciente
               </h3>
 
               <div className="grid-2">
@@ -272,8 +274,8 @@ Você pode salvar vidas! Responda SIM para ajudar.`;
 
             {/* Seção 3: Contato & Detalhes */}
             <div style={{ marginBottom: "32px" }}>
-              <h3 style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--blood)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "16px", paddingBottom: "8px", borderBottom: "2px solid var(--blood-fade)" }}>
-                📞 Contato & Detalhes
+              <h3 style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--blood)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "16px", paddingBottom: "8px", borderBottom: "2px solid var(--blood-fade)", display: "flex", alignItems: "center", gap: "8px" }}>
+                <Phone size={18} color="var(--blood)" /> Contato & Detalhes
               </h3>
 
               <div className={`field ${errors.ajudaContato ? "has-error" : ""}`}>
@@ -335,23 +337,22 @@ Você pode salvar vidas! Responda SIM para ajudar.`;
               >
                 Limpar
               </button>
-              <button type="submit" disabled={loading} className="btn btn--primary">
-                {loading ? "Calculando compatibilidade..." : "🆘 Alertar Doadores da Região"}
-                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-                  <path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="2"
-                    strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+              <button type="submit" disabled={loading} className="btn btn--primary" style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                <Siren size={18} />
+                <span>{loading ? "Calculando compatibilidade..." : "Alertar Doadores da Região"}</span>
+                <ArrowRight size={16} />
               </button>
             </div>
           </form>
 
           {/* Resultado do Envio com Link Direto para WhatsApp */}
           {createdEmergency && (
-            <div style={{ marginTop: "30px", padding: "20px", background: "#e7f4ec", border: "2px solid #1e7a4d", borderRadius: "12px" }}>
-              <h4 style={{ color: "#1e7a4d", fontWeight: 800, margin: "0 0 10px", fontSize: "1.1rem" }}>
-                ✓ Solicitação registrada no banco de dados com sucesso!
+            <div style={{ marginTop: "30px", padding: "24px", background: "#e7f4ec", border: "2px solid #1e7a4d", borderRadius: "12px" }}>
+              <h4 style={{ color: "#1e7a4d", fontWeight: 800, margin: "0 0 10px", fontSize: "1.1rem", display: "flex", alignItems: "center", gap: "8px" }}>
+                <CheckCircle2 size={20} />
+                <span>Solicitação registrada no banco de dados com sucesso!</span>
               </h4>
-              <p style={{ fontSize: "0.9rem", color: "#1c1418", marginBottom: "16px" }}>
+              <p style={{ fontSize: "0.95rem", color: "#1c1418", marginBottom: "16px" }}>
                 Foram identificados <strong>{createdEmergency.doadoresAptosNotificados} doadores compatíveis</strong> no estado de {createdEmergency.estado}.
               </p>
               <a
@@ -359,24 +360,26 @@ Você pode salvar vidas! Responda SIM para ajudar.`;
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn btn--primary"
-                style={{ background: "#25D366", borderColor: "#25D366", color: "white", textDecoration: "none" }}
+                style={{ background: "#25D366", borderColor: "#25D366", color: "white", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px", padding: "12px 24px" }}
               >
-                📱 Abrir WhatsApp e Disparar Alerta Oficial
+                <MessageSquare size={18} />
+                <span>Abrir WhatsApp e Disparar Alerta Oficial</span>
               </a>
             </div>
           )}
 
           {/* Preview de mensagem em tempo real */}
           <div className="ajuda-preview" style={{ display: "block" }}>
-            <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.3rem", color: "var(--blood)", margin: "30px 0 15px" }}>
-              Mensagem que será enviada
+            <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.3rem", color: "var(--blood)", margin: "30px 0 15px", display: "flex", alignItems: "center", gap: "8px" }}>
+              <MessageSquare size={20} />
+              <span>Mensagem que será enviada</span>
             </h3>
             <div
               className="ajuda-message"
               style={{
                 background: "rgba(200, 30, 60, 0.06)",
                 borderLeft: "4px solid var(--blood)",
-                padding: "15px",
+                padding: "16px 20px",
                 borderRadius: "var(--r-md)",
                 fontFamily: "monospace",
                 whiteSpace: "pre-wrap",
@@ -384,18 +387,22 @@ Você pode salvar vidas! Responda SIM para ajudar.`;
                 color: "var(--ink)",
                 maxHeight: "300px",
                 overflowY: "auto",
+                fontSize: "0.92rem",
               }}
             >
               {previewMessage}
             </div>
-            <p style={{ color: "var(--muted)", fontSize: "0.9rem", marginTop: "15px" }}>
-              ✅ Serão notificados: <strong id="doadoresToNotify" style={{ color: "var(--blood)", fontSize: "1.1rem" }}>{compatibility?.totalAptos ?? 0}</strong> doador(es) aptos da região
-              {compatibility && compatibility.tiposCompativeis.length > 0 && (
-                <span style={{ display: "block", marginTop: "4px", fontSize: "0.8rem" }}>
-                  Tipos compatíveis aptos: {compatibility.tiposCompativeis.join(", ")}
-                </span>
-              )}
+            <p style={{ color: "var(--muted)", fontSize: "0.9rem", marginTop: "15px", display: "flex", alignItems: "center", gap: "8px" }}>
+              <CheckCircle2 size={16} color="var(--success)" />
+              <span>
+                Serão notificados: <strong id="doadoresToNotify" style={{ color: "var(--blood)", fontSize: "1.1rem" }}>{compatibility?.totalAptos ?? 0}</strong> doador(es) aptos da região
+              </span>
             </p>
+            {compatibility && compatibility.tiposCompativeis.length > 0 && (
+              <span style={{ display: "block", marginTop: "4px", fontSize: "0.85rem", color: "var(--muted)", paddingLeft: "24px" }}>
+                Tipos compatíveis aptos: {compatibility.tiposCompativeis.join(", ")}
+              </span>
+            )}
           </div>
         </div>
       </div>

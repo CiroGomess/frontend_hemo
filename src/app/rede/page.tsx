@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fetchStats, StatsResponse } from "@/services/api";
+import { Globe, Users, Bell, MapPin } from "lucide-react";
 
 const UFS = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA",
@@ -35,7 +36,10 @@ export default function RedePage() {
         {/* Header com KPIs */}
         <div className="rede-header">
           <div className="rede-title">
-            <h1>🗺️ Rede Nacional de Doadores</h1>
+            <h1 style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <Globe size={32} color="var(--blood)" />
+              <span>Rede Nacional de Doadores</span>
+            </h1>
             <p>Mapa interativo da cobertura HemoAlerta em tempo real</p>
           </div>
           <div className="rede-stats">

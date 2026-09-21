@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { fetchHemocentros, Hemocentro } from "@/services/api";
+import { MapPin, Building2, Search, Phone, Clock, Navigation } from "lucide-react";
 
 const UFS = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA",
@@ -11,13 +12,11 @@ const UFS = [
 export default function HemocentrosPage() {
   const [hemocentros, setHemocentros] = useState<Hemocentro[]>([]);
   const [loading, setLoading] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
   const [estado, setEstado] = useState("");
   const [tipo, setTipo] = useState("");
 
   const handleSearch = () => {
     setLoading(true);
-    setHasSearched(true);
     fetchHemocentros({
       estado: estado || undefined,
       tipo: tipo || undefined,
@@ -43,7 +42,7 @@ export default function HemocentrosPage() {
         </p>
       </div>
 
-      {/* CONTROLES - LAYOUT PREMIUM IDENTICO AO HTML */}
+      {/* CONTROLES */}
       <div
         style={{
           background: "white",
@@ -57,8 +56,8 @@ export default function HemocentrosPage() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "24px", alignItems: "end" }}>
           {/* ESTADO */}
           <div>
-            <label style={{ display: "block", marginBottom: "12px", color: "var(--ink)", fontWeight: 700, fontSize: "0.95rem" }}>
-              🗺️ Estado
+            <label style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "12px", color: "var(--ink)", fontWeight: 700, fontSize: "0.95rem" }}>
+              <MapPin size={18} color="var(--blood)" /> Estado
             </label>
             <div className="select-wrap">
               <select
@@ -77,8 +76,8 @@ export default function HemocentrosPage() {
 
           {/* TIPO */}
           <div>
-            <label style={{ display: "block", marginBottom: "12px", color: "var(--ink)", fontWeight: 700, fontSize: "0.95rem" }}>
-              🏥 Tipo
+            <label style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "12px", color: "var(--ink)", fontWeight: 700, fontSize: "0.95rem" }}>
+              <Building2 size={18} color="var(--blood)" /> Tipo
             </label>
             <div className="select-wrap">
               <select
@@ -109,9 +108,13 @@ export default function HemocentrosPage() {
               fontSize: "1rem",
               height: "fit-content",
               justifyContent: "center",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
             }}
           >
-            🔍 Buscar
+            <Search size={18} />
+            <span>Buscar</span>
           </button>
         </div>
       </div>
@@ -122,9 +125,11 @@ export default function HemocentrosPage() {
           <p style={{ color: "var(--muted)", fontSize: "1.1rem" }}>Buscando hemocentros...</p>
         </div>
       ) : hemocentros.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "100px 20px" }}>
-          <div style={{ fontSize: "4rem", marginBottom: "20px" }}>🏥</div>
-          <p style={{ color: "var(--muted)", fontSize: "1.2rem", margin: "0 auto", maxWidth: "500px", lineHeight: 1.6 }}>
+        <div style={{ textAlign: "center", padding: "80px 20px" }}>
+          <div style={{ display: "grid", placeItems: "center", marginBottom: "16px", color: "var(--muted)" }}>
+            <Building2 size={54} />
+          </div>
+          <p style={{ color: "var(--muted)", fontSize: "1.1rem", margin: "0 auto", maxWidth: "500px", lineHeight: 1.6 }}>
             Nenhum estabelecimento encontrado para os filtros selecionados.
           </p>
         </div>
@@ -168,16 +173,19 @@ export default function HemocentrosPage() {
                   {item.nome}
                 </h3>
 
-                <p style={{ color: "var(--muted)", fontSize: "0.9rem", marginBottom: "10px", lineHeight: 1.5 }}>
-                  📍 {item.endereco}, {item.cidade} - {item.estado}
+                <p style={{ color: "var(--muted)", fontSize: "0.9rem", marginBottom: "10px", lineHeight: 1.5, display: "flex", alignItems: "flex-start", gap: "8px" }}>
+                  <MapPin size={16} color="var(--blood)" style={{ flexShrink: 0, marginTop: "3px" }} />
+                  <span>{item.endereco}, {item.cidade} - {item.estado}</span>
                 </p>
 
-                <p style={{ color: "var(--muted)", fontSize: "0.9rem", marginBottom: "10px" }}>
-                  📞 {item.telefone}
+                <p style={{ color: "var(--muted)", fontSize: "0.9rem", marginBottom: "10px", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <Phone size={16} color="var(--blood)" style={{ flexShrink: 0 }} />
+                  <span>{item.telefone}</span>
                 </p>
 
-                <p style={{ color: "var(--muted)", fontSize: "0.85rem", marginBottom: "16px" }}>
-                  🕒 {item.horario}
+                <p style={{ color: "var(--muted)", fontSize: "0.85rem", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <Clock size={16} color="var(--blood)" style={{ flexShrink: 0 }} />
+                  <span>{item.horario}</span>
                 </p>
               </div>
 
@@ -189,16 +197,18 @@ export default function HemocentrosPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn btn--ghost"
-                  style={{ flex: 1, justifyContent: "center", fontSize: "0.85rem", padding: "10px" }}
+                  style={{ flex: 1, justifyContent: "center", fontSize: "0.85rem", padding: "10px", display: "inline-flex", alignItems: "center", gap: "6px" }}
                 >
-                  🗺️ Rota Maps
+                  <Navigation size={15} />
+                  <span>Rota Maps</span>
                 </a>
                 <a
                   href={`tel:${item.telefone.replace(/\D/g, "")}`}
                   className="btn btn--primary"
-                  style={{ fontSize: "0.85rem", padding: "10px 16px" }}
+                  style={{ fontSize: "0.85rem", padding: "10px 16px", display: "inline-flex", alignItems: "center", gap: "6px" }}
                 >
-                  Ligar
+                  <Phone size={14} />
+                  <span>Ligar</span>
                 </a>
               </div>
             </div>

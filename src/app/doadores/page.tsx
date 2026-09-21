@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { fetchDonors, fetchStats, Donor, StatsResponse } from "@/services/api";
-
-const TIPOS = ["", "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "NS"];
+import { Droplet } from "lucide-react";
 
 export default function DoadoresPage() {
   const [donors, setDonors] = useState<Donor[]>([]);
@@ -48,25 +47,6 @@ export default function DoadoresPage() {
     setPage(1);
   };
 
-  const handleExportJSON = () => {
-    const payload = {
-      tabela: "DOADORES",
-      sistema: "HemoAlerta",
-      geradoEm: new Date().toISOString(),
-      total: donors.length,
-      doadores: donors,
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "doadores.json";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  };
-
   const totalCadastrados = stats?.totalDoadores ?? total;
   const comAlertaAtivo = stats?.doadoresAtivos ?? 0;
   const totalTipos = stats ? Object.keys(stats.distribuicaoPorTipo).length : 8;
@@ -79,7 +59,7 @@ export default function DoadoresPage() {
           <div>
             <h2>Doadores cadastrados</h2>
             <p id="panelSub">
-              Banco de dados relacional SQLite (<code>hemoalerta.db</code>) — pronto para exportar em <code>doadores.json</code>.
+              Banco de dados relacional SQLite (<code>hemoalerta.db</code>) — consulta e filtros em tempo real.
             </p>
           </div>
           <div className="panel__tools">
@@ -115,14 +95,6 @@ export default function DoadoresPage() {
               onChange={handleSearchChange}
               onKeyDown={(e) => e.key === "Enter" && loadData()}
             />
-            <button
-              type="button"
-              onClick={handleExportJSON}
-              className="btn btn--primary"
-              style={{ padding: "8px 16px", fontSize: "0.85rem" }}
-            >
-              Exportar JSON
-            </button>
           </div>
         </div>
 
@@ -152,8 +124,8 @@ export default function DoadoresPage() {
             padding: "18px 20px",
             background: "#fafafa",
             borderRadius: "8px",
-            marginBottom: "0",
-            borderBottom: "1px solid #e0e0e0",
+            margin: "20px 20px 0",
+            border: "1px solid #e0e0e0",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
@@ -199,7 +171,10 @@ export default function DoadoresPage() {
               className="pagination-btn"
               style={{ minWidth: "auto", padding: "8px 12px" }}
               disabled={page === 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              onClick={() => {
+                setPage((p) => Math.max(1, p - 1));
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
               title="Página anterior"
             >
               ← Anterior
@@ -209,7 +184,10 @@ export default function DoadoresPage() {
               className="pagination-btn"
               style={{ minWidth: "auto", padding: "8px 12px" }}
               disabled={page === totalPages || totalPages === 0}
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              onClick={() => {
+                setPage((p) => Math.min(totalPages, p + 1));
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
               title="Próxima página"
             >
               Próximo →
@@ -218,7 +196,7 @@ export default function DoadoresPage() {
         </div>
 
         {/* Tabela */}
-        <div className="table-scroll">
+        <div className="table-scroll" style={{ marginTop: "20px" }}>
           <table className="table" id="donorTable">
             <thead>
               <tr>
@@ -241,7 +219,9 @@ export default function DoadoresPage() {
                 <tr>
                   <td colSpan={6}>
                     <div className="empty show" id="emptyState">
-                      <div className="empty__drop" aria-hidden="true">🩸</div>
+                      <div className="empty__drop" aria-hidden="true" style={{ display: "grid", placeItems: "center" }}>
+                        <Droplet size={36} color="var(--blood)" fill="var(--blood)" />
+                      </div>
                       <h3>Nenhum resultado</h3>
                       <p>Ajuste a busca ou o filtro de tipo sanguíneo.</p>
                     </div>
@@ -254,11 +234,17 @@ export default function DoadoresPage() {
                     ? new Date(d.dataCadastro).toLocaleDateString("pt-BR")
                     : "—";
 
+                  const maskedEmail = d.emailExibicao || (d.email ? d.email.replace(/(.{2})(.*)(@.*)/, "$1***$3") : null);
+
                   return (
                     <tr key={d.id}>
                       <td>
                         <div className="cell-name">{d.nomeCompleto}</div>
-                        {d.email && <div className="cell-sub">••••••••••••</div>}
+                        {maskedEmail && (
+                          <div className="cell-sub" title="E-mail mascarado por LGPD">
+                            {maskedEmail}
+                          </div>
+                        )}
                       </td>
                       <td>
                         <span className={`bt ${isNS ? "bt--ns" : ""}`}>
@@ -295,7 +281,10 @@ export default function DoadoresPage() {
                 key={pNum}
                 type="button"
                 className={`pagination-btn ${pNum === page ? "active" : ""}`}
-                onClick={() => setPage(pNum)}
+                onClick={() => {
+                  setPage(pNum);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
               >
                 {pNum}
               </button>
