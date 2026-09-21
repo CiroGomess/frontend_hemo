@@ -2,13 +2,67 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { sendEmergency, checkCompatibility, EmergencyResponse } from "@/services/api";
-import { Siren, Zap, Globe, Activity, Droplet, MapPin, Phone, CheckCircle2, MessageSquare, AlertTriangle, ArrowRight } from "lucide-react";
+import { sendEmergency, checkCompatibility, EmergencyResponse, CompatibilityResponse } from "@/services/api";
+import ConfirmModal from "@/components/ConfirmModal";
+import {
+  Siren,
+  Zap,
+  Globe,
+  Activity,
+  Droplet,
+  MapPin,
+  Phone,
+  CheckCircle2,
+  MessageSquare,
+  AlertTriangle,
+  ArrowRight,
+  Building2,
+  Clock,
+  ShieldCheck,
+  Send,
+  RotateCcw,
+  Sparkles,
+  Check,
+  Plus,
+  Minus,
+  ExternalLink,
+  Info,
+} from "lucide-react";
 
-const TIPOS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+const TIPOS_SANGUINEOS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 const UFS = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA",
   "PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"
+];
+
+const URGENCIAS = [
+  {
+    id: "CRÍTICA",
+    titulo: "Crítica",
+    tempo: "Até 6 horas",
+    desc: "Trauma grave, choque hemorrágico ou cirurgia de urgência imediata",
+    cor: "#dc2626",
+    bg: "#fef2f2",
+    border: "#fca5a5",
+  },
+  {
+    id: "ALTA",
+    titulo: "Alta",
+    tempo: "Até 24 horas",
+    desc: "Internação em UTI, reposição oncológica ou procedimento agendado",
+    cor: "#ea580c",
+    bg: "#fff7ed",
+    border: "#fdba74",
+  },
+  {
+    id: "MÉDIA",
+    titulo: "Moderada",
+    tempo: "48 a 72 horas",
+    desc: "Estoque preventivo ou cirurgia eletiva com previsão de transfusão",
+    cor: "#d97706",
+    bg: "#fffbeb",
+    border: "#fde68a",
+  },
 ];
 
 function maskPhone(v: string) {
@@ -25,21 +79,22 @@ function EmergenciaContent() {
   const ufParam = searchParams.get("estado") || "";
 
   const [formData, setFormData] = useState({
-    ajudaTipo: "O+",
-    ajudaQuantidade: 1,
+    ajudaTipo: "O-",
+    ajudaQuantidade: 2,
     ajudaUrgencia: "CRÍTICA",
-    ajudaCidade: "São Paulo",
-    ajudaEstado: ufParam || "SP",
-    ajudaPaciente: "",
+    ajudaCidade: "João Pessoa",
+    ajudaEstado: ufParam || "PB",
+    ajudaPaciente: "Hospital Regional / Central de Traumas",
     ajudaContato: "",
     ajudaMensagem: "",
   });
 
-  const [compatibility, setCompatibility] = useState<{ totalAptos: number; tiposCompativeis: string[] } | null>(null);
+  const [compatibility, setCompatibility] = useState<CompatibilityResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingCompat, setLoadingCompat] = useState(false);
   const [createdEmergency, setCreatedEmergency] = useState<EmergencyResponse | null>(null);
-  const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   useEffect(() => {
     if (ufParam) {
@@ -47,37 +102,44 @@ function EmergenciaContent() {
     }
   }, [ufParam]);
 
+  // Consulta compatibilidade em tempo real ao mudar tipo, UF ou cidade
   useEffect(() => {
     if (formData.ajudaTipo && formData.ajudaEstado) {
+      setLoadingCompat(true);
       checkCompatibility(
         formData.ajudaTipo,
         formData.ajudaEstado,
         formData.ajudaCidade || undefined
       )
         .then((data) => setCompatibility(data))
-        .catch(() => {});
+        .catch(() => {})
+        .finally(() => setLoadingCompat(false));
     }
   }, [formData.ajudaTipo, formData.ajudaEstado, formData.ajudaCidade]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const validateForm = () => {
     const errs: Record<string, string> = {};
-
     if (!formData.ajudaTipo) errs.ajudaTipo = "Selecione o tipo de sangue.";
-    if (!formData.ajudaQuantidade || formData.ajudaQuantidade < 1) errs.ajudaQuantidade = "Quantidade mínima é 1 bolsa.";
+    if (!formData.ajudaQuantidade || formData.ajudaQuantidade < 1) errs.ajudaQuantidade = "Informe ao menos 1 bolsa.";
     if (!formData.ajudaCidade.trim()) errs.ajudaCidade = "Informe a cidade.";
     if (!formData.ajudaEstado) errs.ajudaEstado = "Selecione a UF.";
-    if (!formData.ajudaPaciente.trim()) errs.ajudaPaciente = "Informe o paciente ou instituição.";
-    if (!formData.ajudaContato.trim()) errs.ajudaContato = "Informe o telefone de contato.";
-
-    if (Object.keys(errs).length > 0) {
-      setErrors(errs);
-      return;
+    if (!formData.ajudaPaciente.trim()) errs.ajudaPaciente = "Informe a instituição ou paciente.";
+    if (!formData.ajudaContato.trim() || formData.ajudaContato.replace(/\D/g, "").length < 10) {
+      errs.ajudaContato = "Informe um telefone válido com DDD (WhatsApp).";
     }
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
 
+  const handleOpenConfirm = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validateForm()) {
+      setShowConfirmModal(true);
+    }
+  };
+
+  const handleExecuteSend = async () => {
     setLoading(true);
-    setToastMsg(null);
-
     try {
       const res = await sendEmergency({
         tipo: formData.ajudaTipo,
@@ -91,321 +153,848 @@ function EmergenciaContent() {
       });
 
       setCreatedEmergency(res.emergencia);
-      setToastMsg("Alertas emitidos para os doadores compatíveis da região!");
       setErrors({});
+      window.scrollTo({ top: 300, behavior: "smooth" });
     } catch (err: any) {
-      setToastMsg("Erro ao processar alerta: " + err.message);
+      alert("Erro ao processar alerta: " + err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const previewMessage = `[ALERTA DE EMERGÊNCIA — HEMOALERTA]
-Nível de Urgência: ${formData.ajudaUrgencia}
-Tipo sanguíneo necessário: ${formData.ajudaTipo}
-Quantidade de bolsas: ${formData.ajudaQuantidade} bolsa(s)
-Paciente / Unidade: ${formData.ajudaPaciente || "[Paciente / Instituição]"}
-Local: ${formData.ajudaCidade}, ${formData.ajudaEstado}
-Contato: ${formData.ajudaContato || "[Telefone]"}
-${formData.ajudaMensagem ? "\nObservações: " + formData.ajudaMensagem : ""}
+  const handleReset = () => {
+    setFormData({
+      ajudaTipo: "O-",
+      ajudaQuantidade: 1,
+      ajudaUrgencia: "CRÍTICA",
+      ajudaCidade: "João Pessoa",
+      ajudaEstado: "PB",
+      ajudaPaciente: "",
+      ajudaContato: "",
+      ajudaMensagem: "",
+    });
+    setCreatedEmergency(null);
+    setErrors({});
+  };
 
-Sua doação pode salvar vidas neste momento! Responda SIM para confirmar disponibilidade.`;
+  const previewMessage = `🚨 *[ALERTA DE EMERGÊNCIA — HEMOALERTA]*
+
+⚠️ *Nível de Urgência:* ${formData.ajudaUrgencia}
+🩸 *Tipo Sanguíneo Necessário:* ${formData.ajudaTipo}
+📦 *Demanda:* ${formData.ajudaQuantidade} bolsa(s)
+🏥 *Hospital / Paciente:* ${formData.ajudaPaciente || "Instituição de Saúde"}
+📍 *Localização:* ${formData.ajudaCidade || "Cidade"}, ${formData.ajudaEstado}
+📞 *Contato Direto:* ${formData.ajudaContato || "(XX) XXXXX-XXXX"}
+${formData.ajudaMensagem ? `\n📝 *Observações:* ${formData.ajudaMensagem}` : ""}
+
+_Sua doação pode salvar uma vida agora mesmo. Responda esta mensagem se puder comparecer para doar!_`;
 
   return (
-    <div style={{ maxWidth: "1180px", margin: "0 auto", padding: "clamp(20px, 4vw, 40px)" }}>
-      {/* Hero/Intro */}
-      <div
+    <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "clamp(20px, 3.5vw, 48px) clamp(16px, 2.5vw, 32px)" }}>
+      {/* ======================= HERO BANNER PROFISSIONAL ======================= */}
+      <section
         style={{
-          background: "linear-gradient(135deg, var(--blood-dark), var(--blood-deep))",
-          color: "white",
-          padding: "40px",
-          borderRadius: "16px",
-          marginBottom: "30px",
-          textAlign: "center",
+          background: "linear-gradient(135deg, #881337 0%, #9f1239 50%, #4c0519 100%)",
+          color: "#ffffff",
+          padding: "clamp(28px, 4vw, 44px)",
+          borderRadius: "24px",
+          marginBottom: "32px",
+          boxShadow: "0 20px 40px -15px rgba(136, 19, 55, 0.4)",
+          position: "relative",
+          overflow: "hidden",
+          border: "1px solid rgba(255, 255, 255, 0.12)",
         }}
       >
-        <h2 style={{ fontSize: "2.2rem", fontWeight: 800, marginBottom: "12px", fontFamily: "var(--font-display)", display: "flex", alignItems: "center", justifyContent: "center", gap: "12px" }}>
-          <Siren size={36} color="var(--blood-bright)" />
-          <span>Chamar Doadores em Emergência</span>
-        </h2>
-        <p style={{ fontSize: "1.05rem", marginBottom: "16px", opacity: 0.95 }}>
-          Solicite doadores de sangue na sua região quando houver urgência. A rede HemoAlerta o conectará aos doadores voluntários cadastrados.
-        </p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px", marginTop: "24px" }}>
-          <div style={{ background: "rgba(255,255,255,0.1)", padding: "16px", borderRadius: "10px", display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
-            <Zap size={28} color="#f2b705" />
-            <div style={{ fontSize: "0.85rem", fontWeight: 600 }}>Alertas Instantâneos</div>
+        {/* Glow decorativo de fundo */}
+        <div
+          style={{
+            position: "absolute",
+            top: "-50px",
+            right: "-50px",
+            width: "300px",
+            height: "300px",
+            borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(244, 63, 94, 0.35) 0%, transparent 70%)",
+            pointerEvents: "none",
+          }}
+        />
+
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "20px", position: "relative", zIndex: 1 }}>
+          <div style={{ maxWidth: "780px" }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", background: "rgba(255, 255, 255, 0.15)", backdropFilter: "blur(10px)", padding: "6px 14px", borderRadius: "30px", fontSize: "0.82rem", fontWeight: 700, letterSpacing: "0.5px", textTransform: "uppercase", marginBottom: "16px" }}>
+              <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#ef4444", boxShadow: "0 0 8px #ef4444" }} />
+              <Siren size={15} color="#fecdd3" />
+              <span>Rede Nacional de Resposta Rápida</span>
+            </div>
+
+            <h1 style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.7rem)", fontWeight: 900, lineHeight: 1.15, fontFamily: "var(--font-display)", margin: "0 0 12px 0", letterSpacing: "-0.5px" }}>
+              Central de Chamadas de Emergência (SOS)
+            </h1>
+
+            <p style={{ fontSize: "clamp(0.95rem, 1.5vw, 1.12rem)", opacity: 0.92, lineHeight: 1.6, margin: 0, maxWidth: "680px" }}>
+              Cadastre a solicitação urgente de bolsas de sangue. O sistema cruza as regras de compatibilidade biológica e direciona alertas oficiais via WhatsApp diretamente para voluntários aptos no estado.
+            </p>
           </div>
-          <div style={{ background: "rgba(255,255,255,0.1)", padding: "16px", borderRadius: "10px", display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
-            <Globe size={28} color="#42b881" />
-            <div style={{ fontSize: "0.85rem", fontWeight: 600 }}>Segmentação por Região</div>
-          </div>
-          <div style={{ background: "rgba(255,255,255,0.1)", padding: "16px", borderRadius: "10px", display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
-            <Activity size={28} color="#ff3d5a" />
-            <div style={{ fontSize: "0.85rem", fontWeight: 600 }}>Voluntários Aptos</div>
+
+          <div
+            style={{
+              background: "rgba(255, 255, 255, 0.08)",
+              backdropFilter: "blur(12px)",
+              border: "1px solid rgba(255, 255, 255, 0.18)",
+              padding: "16px 22px",
+              borderRadius: "16px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "6px",
+              minWidth: "220px",
+            }}
+          >
+            <span style={{ fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.5px", color: "#fecdd3", fontWeight: 700 }}>
+              Suporte Clínico & Hemorrede
+            </span>
+            <span style={{ fontSize: "1.25rem", fontWeight: 800, fontFamily: "var(--font-display)" }}>
+              Disque Saúde: 136
+            </span>
+            <span style={{ fontSize: "0.75rem", opacity: 0.8 }}>
+              Orientação pública do Ministério da Saúde
+            </span>
           </div>
         </div>
-      </div>
 
-      {toastMsg && (
-        <div style={{ background: "#e7f4ec", border: "1px solid #1e7a4d", color: "#1e7a4d", padding: "14px 20px", borderRadius: "12px", marginBottom: "24px", fontWeight: 700, display: "flex", alignItems: "center", gap: "8px" }}>
-          <CheckCircle2 size={20} />
-          <span>{toastMsg}</span>
+        {/* Três pilares de segurança */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px", marginTop: "28px", position: "relative", zIndex: 1 }}>
+          <div style={{ background: "rgba(0, 0, 0, 0.2)", backdropFilter: "blur(8px)", padding: "14px 18px", borderRadius: "14px", border: "1px solid rgba(255, 255, 255, 0.08)", display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{ width: "38px", height: "38px", borderRadius: "10px", background: "rgba(245, 158, 11, 0.2)", display: "grid", placeItems: "center" }}>
+              <Zap size={20} color="#fbbf24" />
+            </div>
+            <div>
+              <div style={{ fontSize: "0.86rem", fontWeight: 700 }}>Disparo Instantâneo</div>
+              <div style={{ fontSize: "0.75rem", opacity: 0.8 }}>Notificações no WhatsApp em segundos</div>
+            </div>
+          </div>
+
+          <div style={{ background: "rgba(0, 0, 0, 0.2)", backdropFilter: "blur(8px)", padding: "14px 18px", borderRadius: "14px", border: "1px solid rgba(255, 255, 255, 0.08)", display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{ width: "38px", height: "38px", borderRadius: "10px", background: "rgba(34, 197, 94, 0.2)", display: "grid", placeItems: "center" }}>
+              <Globe size={20} color="#4ade80" />
+            </div>
+            <div>
+              <div style={{ fontSize: "0.86rem", fontWeight: 700 }}>Segmentação Geográfica</div>
+              <div style={{ fontSize: "0.75rem", opacity: 0.8 }}>Filtragem rigorosa por estado e município</div>
+            </div>
+          </div>
+
+          <div style={{ background: "rgba(0, 0, 0, 0.2)", backdropFilter: "blur(8px)", padding: "14px 18px", borderRadius: "14px", border: "1px solid rgba(255, 255, 255, 0.08)", display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{ width: "38px", height: "38px", borderRadius: "10px", background: "rgba(244, 63, 94, 0.2)", display: "grid", placeItems: "center" }}>
+              <ShieldCheck size={20} color="#fda4af" />
+            </div>
+            <div>
+              <div style={{ fontSize: "0.86rem", fontWeight: 700 }}>Compatibilidade Genética</div>
+              <div style={{ fontSize: "0.75rem", opacity: 0.8 }}>Apenas grupos compatíveis são acionados</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ======================= TELA DE SUCESSO PÓS-ENVIO ======================= */}
+      {createdEmergency && (
+        <div
+          style={{
+            background: "linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%)",
+            border: "2px solid #86efac",
+            borderRadius: "20px",
+            padding: "28px",
+            marginBottom: "32px",
+            boxShadow: "0 10px 25px -5px rgba(22, 163, 74, 0.15)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "flex-start", gap: "16px" }}>
+            <div style={{ width: "48px", height: "48px", borderRadius: "14px", background: "#22c55e", display: "grid", placeItems: "center", color: "#fff", flexShrink: 0, boxShadow: "0 6px 16px rgba(34, 197, 94, 0.35)" }}>
+              <CheckCircle2 size={26} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#14532d", margin: "0 0 6px 0" }}>
+                Alerta de Emergência SOS Registrado com Sucesso!
+              </h2>
+              <p style={{ color: "#166534", fontSize: "0.95rem", margin: "0 0 16px 0" }}>
+                Identificamos <strong>{createdEmergency.doadoresAptosNotificados} doadores compatíveis</strong> no estado de <strong>{createdEmergency.estado}</strong> que podem doar para o grupo <strong>{createdEmergency.tipo}</strong>.
+              </p>
+
+              <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+                <a
+                  href={createdEmergency.whatsappShareLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    background: "linear-gradient(135deg, #16a34a, #15803d)",
+                    color: "#ffffff",
+                    textDecoration: "none",
+                    padding: "12px 24px",
+                    borderRadius: "10px",
+                    fontWeight: 700,
+                    fontSize: "0.92rem",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    boxShadow: "0 4px 14px rgba(22, 163, 74, 0.3)",
+                  }}
+                >
+                  <MessageSquare size={18} />
+                  <span>Abrir WhatsApp Web e Disparar Mensagem</span>
+                  <ExternalLink size={14} />
+                </a>
+
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  style={{
+                    background: "#ffffff",
+                    color: "#166534",
+                    border: "1.5px solid #86efac",
+                    padding: "12px 20px",
+                    borderRadius: "10px",
+                    fontWeight: 600,
+                    fontSize: "0.92rem",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                  }}
+                >
+                  <Plus size={16} />
+                  <span>Cadastrar Outra Solicitação</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
-      <div className="panel">
-        <div className="panel__head">
-          <div>
-            <h2>Formulário de Solicitação SOS</h2>
-            <p>Preencha os detalhes abaixo para mobilizar a rede de doadores compatíveis.</p>
-          </div>
-        </div>
-
-        <div style={{ padding: "30px" }}>
-          <form onSubmit={handleSubmit} className="form" noValidate>
-            {/* Seção 1: Sangue & Urgência */}
-            <div style={{ marginBottom: "32px" }}>
-              <h3 style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--blood)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "16px", paddingBottom: "8px", borderBottom: "2px solid var(--blood-fade)", display: "flex", alignItems: "center", gap: "8px" }}>
-                <Droplet size={18} color="var(--blood)" /> Tipo de Sangue & Urgência
-              </h3>
-
-              <div className="grid-2">
-                <div className={`field ${errors.ajudaTipo ? "has-error" : ""}`}>
-                  <label htmlFor="ajudaTipo">Tipo sanguíneo <span className="req">*</span></label>
-                  <div className="select-wrap">
-                    <select
-                      id="ajudaTipo"
-                      value={formData.ajudaTipo}
-                      onChange={(e) => setFormData({ ...formData, ajudaTipo: e.target.value })}
-                    >
-                      {TIPOS.map((t) => (
-                        <option key={t} value={t}>{t}</option>
-                      ))}
-                    </select>
-                  </div>
-                  {errors.ajudaTipo && <small className="error">{errors.ajudaTipo}</small>}
+      {/* ======================= LAYOUT PRINCIPAL EM 2 COLUNAS ======================= */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 540px), 1fr))",
+          gap: "28px",
+          alignItems: "start",
+        }}
+      >
+        {/* ===================== COLUNA ESQUERDA: FORMULÁRIO SOS ===================== */}
+        <div>
+          <form onSubmit={handleOpenConfirm} noValidate style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+            
+            {/* CARD 1: SANGUE, QUANTIDADE E URGÊNCIA */}
+            <div
+              style={{
+                background: "#ffffff",
+                borderRadius: "20px",
+                padding: "26px",
+                border: "1px solid #e2e8f0",
+                boxShadow: "0 4px 20px rgba(0, 0, 0, 0.04)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px", paddingBottom: "14px", borderBottom: "1px solid #f1f5f9" }}>
+                <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#fee2e2", display: "grid", placeItems: "center", color: "#dc2626" }}>
+                  <Droplet size={18} />
                 </div>
-
-                <div className={`field ${errors.ajudaQuantidade ? "has-error" : ""}`}>
-                  <label htmlFor="ajudaQuantidade">Quantidade de bolsas <span className="req">*</span></label>
-                  <input
-                    type="number"
-                    id="ajudaQuantidade"
-                    min="1"
-                    max="50"
-                    value={formData.ajudaQuantidade}
-                    onChange={(e) => setFormData({ ...formData, ajudaQuantidade: Number(e.target.value) })}
-                  />
-                  {errors.ajudaQuantidade && <small className="error">{errors.ajudaQuantidade}</small>}
+                <div>
+                  <h2 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#0f172a", margin: 0 }}>
+                    1. Tipo Sanguíneo & Prioridade
+                  </h2>
+                  <p style={{ fontSize: "0.82rem", color: "#64748b", margin: 0 }}>
+                    Defina qual tipo sanguíneo é necessário e o prazo limite de atendimento
+                  </p>
                 </div>
               </div>
 
-              <div className="grid-2" style={{ marginTop: "18px" }}>
-                <div className={`field ${errors.ajudaUrgencia ? "has-error" : ""}`}>
-                  <label htmlFor="ajudaUrgencia">Nível de urgência <span className="req">*</span></label>
-                  <div className="select-wrap">
-                    <select
-                      id="ajudaUrgencia"
-                      value={formData.ajudaUrgencia}
-                      onChange={(e) => setFormData({ ...formData, ajudaUrgencia: e.target.value })}
+              {/* Seletor Visual de Tipo Sanguíneo */}
+              <div style={{ marginBottom: "22px" }}>
+                <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, color: "#334155", marginBottom: "10px" }}>
+                  Tipo Sanguíneo Necessário *
+                </label>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px" }}>
+                  {TIPOS_SANGUINEOS.map((tipo) => {
+                    const isSelected = formData.ajudaTipo === tipo;
+                    return (
+                      <button
+                        key={tipo}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, ajudaTipo: tipo })}
+                        style={{
+                          padding: "14px 10px",
+                          borderRadius: "12px",
+                          border: isSelected ? "2px solid #dc2626" : "1.5px solid #e2e8f0",
+                          background: isSelected ? "linear-gradient(135deg, #dc2626, #b91c1c)" : "#f8fafc",
+                          color: isSelected ? "#ffffff" : "#1e293b",
+                          fontSize: "1.1rem",
+                          fontWeight: 800,
+                          cursor: "pointer",
+                          transition: "all 0.18s ease",
+                          boxShadow: isSelected ? "0 6px 16px rgba(220, 38, 38, 0.3)" : "none",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          gap: "4px",
+                        }}
+                      >
+                        <span>{tipo}</span>
+                        <span style={{ fontSize: "0.65rem", fontWeight: 600, opacity: isSelected ? 0.9 : 0.6, textTransform: "uppercase" }}>
+                          {isSelected ? "Selecionado" : "Grupo"}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {errors.ajudaTipo && <small style={{ color: "#dc2626", fontSize: "0.8rem", marginTop: "4px", display: "block" }}>{errors.ajudaTipo}</small>}
+              </div>
+
+              {/* Quantidade de bolsas com Stepper moderno */}
+              <div style={{ marginBottom: "22px" }}>
+                <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, color: "#334155", marginBottom: "8px" }}>
+                  Quantidade de Bolsas Estimada *
+                </label>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      background: "#f1f5f9",
+                      borderRadius: "12px",
+                      padding: "4px",
+                      border: "1px solid #cbd5e1",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setFormData((p) => ({ ...p, ajudaQuantidade: Math.max(1, p.ajudaQuantidade - 1) }))}
+                      style={{
+                        width: "36px",
+                        height: "36px",
+                        borderRadius: "8px",
+                        border: "none",
+                        background: "#ffffff",
+                        color: "#334155",
+                        cursor: "pointer",
+                        display: "grid",
+                        placeItems: "center",
+                        fontWeight: 700,
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                      }}
                     >
-                      <option value="CRÍTICA">Crítica (Até 6 horas)</option>
-                      <option value="ALTA">Alta (Até 24 horas)</option>
-                      <option value="MÉDIA">Média (Agendamento urgente)</option>
-                    </select>
+                      <Minus size={16} />
+                    </button>
+
+                    <span style={{ minWidth: "60px", textAlign: "center", fontWeight: 800, fontSize: "1.15rem", color: "#0f172a" }}>
+                      {formData.ajudaQuantidade} {formData.ajudaQuantidade === 1 ? "bolsa" : "bolsas"}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => setFormData((p) => ({ ...p, ajudaQuantidade: Math.min(50, p.ajudaQuantidade + 1) }))}
+                      style={{
+                        width: "36px",
+                        height: "36px",
+                        borderRadius: "8px",
+                        border: "none",
+                        background: "#ffffff",
+                        color: "#334155",
+                        cursor: "pointer",
+                        display: "grid",
+                        placeItems: "center",
+                        fontWeight: 700,
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                      }}
+                    >
+                      <Plus size={16} />
+                    </button>
                   </div>
-                  {errors.ajudaUrgencia && <small className="error">{errors.ajudaUrgencia}</small>}
+
+                  {/* Atalhos rápidos de quantidade */}
+                  <div style={{ display: "flex", gap: "6px" }}>
+                    {[1, 2, 4, 10].map((qty) => (
+                      <button
+                        key={qty}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, ajudaQuantidade: qty })}
+                        style={{
+                          background: formData.ajudaQuantidade === qty ? "#fee2e2" : "#f8fafc",
+                          border: formData.ajudaQuantidade === qty ? "1px solid #fca5a5" : "1px solid #e2e8f0",
+                          color: formData.ajudaQuantidade === qty ? "#991b1b" : "#475569",
+                          borderRadius: "8px",
+                          padding: "6px 12px",
+                          fontSize: "0.8rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                        }}
+                      >
+                        +{qty}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {errors.ajudaQuantidade && <small style={{ color: "#dc2626", fontSize: "0.8rem", marginTop: "4px", display: "block" }}>{errors.ajudaQuantidade}</small>}
+              </div>
+
+              {/* Nível de Urgência com Cards Explicativos */}
+              <div>
+                <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, color: "#334155", marginBottom: "8px" }}>
+                  Nível de Urgência da Transfusão *
+                </label>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  {URGENCIAS.map((urg) => {
+                    const isSelected = formData.ajudaUrgencia === urg.id;
+                    return (
+                      <div
+                        key={urg.id}
+                        onClick={() => setFormData({ ...formData, ajudaUrgencia: urg.id })}
+                        style={{
+                          border: isSelected ? `2px solid ${urg.cor}` : "1.5px solid #e2e8f0",
+                          background: isSelected ? urg.bg : "#ffffff",
+                          borderRadius: "12px",
+                          padding: "14px 16px",
+                          cursor: "pointer",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        <div>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <span style={{ fontWeight: 800, fontSize: "0.95rem", color: urg.cor }}>
+                              {urg.titulo}
+                            </span>
+                            <span
+                              style={{
+                                background: urg.cor,
+                                color: "#ffffff",
+                                padding: "2px 8px",
+                                borderRadius: "20px",
+                                fontSize: "0.72rem",
+                                fontWeight: 700,
+                              }}
+                            >
+                              {urg.tempo}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: "0.78rem", color: "#64748b", marginTop: "3px" }}>
+                            {urg.desc}
+                          </div>
+                        </div>
+
+                        <div
+                          style={{
+                            width: "20px",
+                            height: "20px",
+                            borderRadius: "50%",
+                            border: isSelected ? `6px solid ${urg.cor}` : "2px solid #cbd5e1",
+                            background: "#ffffff",
+                            flexShrink: 0,
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
 
-            {/* Seção 2: Localização & Paciente */}
-            <div style={{ marginBottom: "32px" }}>
-              <h3 style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--blood)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "16px", paddingBottom: "8px", borderBottom: "2px solid var(--blood-fade)", display: "flex", alignItems: "center", gap: "8px" }}>
-                <MapPin size={18} color="var(--blood)" /> Localização & Paciente
-              </h3>
+            {/* CARD 2: LOCALIZAÇÃO E DESTINATÁRIO */}
+            <div
+              style={{
+                background: "#ffffff",
+                borderRadius: "20px",
+                padding: "26px",
+                border: "1px solid #e2e8f0",
+                boxShadow: "0 4px 20px rgba(0, 0, 0, 0.04)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px", paddingBottom: "14px", borderBottom: "1px solid #f1f5f9" }}>
+                <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#e0f2fe", display: "grid", placeItems: "center", color: "#0284c7" }}>
+                  <MapPin size={18} />
+                </div>
+                <div>
+                  <h2 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#0f172a", margin: 0 }}>
+                    2. Local de Atendimento & Paciente
+                  </h2>
+                  <p style={{ fontSize: "0.82rem", color: "#64748b", margin: 0 }}>
+                    Onde o sangue deve ser doado ou entregue
+                  </p>
+                </div>
+              </div>
 
-              <div className="grid-2">
-                <div className={`field ${errors.ajudaCidade ? "has-error" : ""}`}>
-                  <label htmlFor="ajudaCidade">Cidade <span className="req">*</span></label>
+              <div style={{ display: "grid", gridTemplateColumns: "2.5fr 1fr", gap: "14px", marginBottom: "18px" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>
+                    Cidade da Unidade de Saúde *
+                  </label>
                   <input
                     type="text"
-                    id="ajudaCidade"
                     value={formData.ajudaCidade}
                     onChange={(e) => setFormData({ ...formData, ajudaCidade: e.target.value })}
-                    placeholder="Ex: São Paulo"
+                    placeholder="Ex: João Pessoa"
+                    style={{
+                      width: "100%",
+                      padding: "11px 14px",
+                      borderRadius: "10px",
+                      border: errors.ajudaCidade ? "1.5px solid #dc2626" : "1.5px solid #cbd5e1",
+                      fontSize: "0.92rem",
+                    }}
                   />
-                  {errors.ajudaCidade && <small className="error">{errors.ajudaCidade}</small>}
+                  {errors.ajudaCidade && <small style={{ color: "#dc2626", fontSize: "0.8rem", marginTop: "4px", display: "block" }}>{errors.ajudaCidade}</small>}
                 </div>
 
-                <div className={`field field--uf ${errors.ajudaEstado ? "has-error" : ""}`}>
-                  <label htmlFor="ajudaEstado">UF <span className="req">*</span></label>
-                  <div className="select-wrap">
-                    <select
-                      id="ajudaEstado"
-                      value={formData.ajudaEstado}
-                      onChange={(e) => setFormData({ ...formData, ajudaEstado: e.target.value })}
-                    >
-                      {UFS.map((uf) => (
-                        <option key={uf} value={uf}>{uf}</option>
-                      ))}
-                    </select>
-                  </div>
-                  {errors.ajudaEstado && <small className="error">{errors.ajudaEstado}</small>}
+                <div>
+                  <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>
+                    UF *
+                  </label>
+                  <select
+                    value={formData.ajudaEstado}
+                    onChange={(e) => setFormData({ ...formData, ajudaEstado: e.target.value })}
+                    style={{
+                      width: "100%",
+                      padding: "11px 12px",
+                      borderRadius: "10px",
+                      border: "1.5px solid #cbd5e1",
+                      fontSize: "0.92rem",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {UFS.map((uf) => (
+                      <option key={uf} value={uf}>{uf}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
-              <div className={`field ${errors.ajudaPaciente ? "has-error" : ""}`} style={{ marginTop: "18px" }}>
-                <label htmlFor="ajudaPaciente">Paciente / Instituição <span className="req">*</span></label>
-                <input
-                  type="text"
-                  id="ajudaPaciente"
-                  value={formData.ajudaPaciente}
-                  onChange={(e) => setFormData({ ...formData, ajudaPaciente: e.target.value })}
-                  placeholder="Hospital Central / João Silva"
-                />
-                <small style={{ display: "block", color: "var(--muted)", fontSize: "0.8rem", marginTop: "4px" }}>
-                  Quem vai receber a transfusão? (paciente ou hospital)
+              <div>
+                <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>
+                  Hospital / Paciente / Banco de Sangue *
+                </label>
+                <div style={{ position: "relative" }}>
+                  <Building2 size={18} color="#94a3b8" style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }} />
+                  <input
+                    type="text"
+                    value={formData.ajudaPaciente}
+                    onChange={(e) => setFormData({ ...formData, ajudaPaciente: e.target.value })}
+                    placeholder="Ex: Hemocentro Regional de João Pessoa / Paciente Maria Silva"
+                    style={{
+                      width: "100%",
+                      padding: "11px 14px 11px 38px",
+                      borderRadius: "10px",
+                      border: errors.ajudaPaciente ? "1.5px solid #dc2626" : "1.5px solid #cbd5e1",
+                      fontSize: "0.92rem",
+                    }}
+                  />
+                </div>
+                <small style={{ display: "block", color: "#64748b", fontSize: "0.78rem", marginTop: "4px" }}>
+                  Identifique quem receberá o sangue ou a ala hospitalar de destino
                 </small>
-                {errors.ajudaPaciente && <small className="error">{errors.ajudaPaciente}</small>}
+                {errors.ajudaPaciente && <small style={{ color: "#dc2626", fontSize: "0.8rem", marginTop: "4px", display: "block" }}>{errors.ajudaPaciente}</small>}
               </div>
             </div>
 
-            {/* Seção 3: Contato & Detalhes */}
-            <div style={{ marginBottom: "32px" }}>
-              <h3 style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--blood)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "16px", paddingBottom: "8px", borderBottom: "2px solid var(--blood-fade)", display: "flex", alignItems: "center", gap: "8px" }}>
-                <Phone size={18} color="var(--blood)" /> Contato & Detalhes
-              </h3>
-
-              <div className={`field ${errors.ajudaContato ? "has-error" : ""}`}>
-                <label htmlFor="ajudaContato">Telefone para contato <span className="req">*</span></label>
-                <input
-                  type="tel"
-                  id="ajudaContato"
-                  inputMode="numeric"
-                  value={formData.ajudaContato}
-                  onChange={(e) => setFormData({ ...formData, ajudaContato: maskPhone(e.target.value) })}
-                  placeholder="(11) 90000-0000"
-                  maxLength={16}
-                />
-                <small style={{ display: "block", color: "var(--muted)", fontSize: "0.8rem", marginTop: "4px" }}>
-                  Doadores entrarão em contato por WhatsApp neste número
-                </small>
-                {errors.ajudaContato && <small className="error">{errors.ajudaContato}</small>}
+            {/* CARD 3: CONTATO E OBSERVAÇÕES */}
+            <div
+              style={{
+                background: "#ffffff",
+                borderRadius: "20px",
+                padding: "26px",
+                border: "1px solid #e2e8f0",
+                boxShadow: "0 4px 20px rgba(0, 0, 0, 0.04)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px", paddingBottom: "14px", borderBottom: "1px solid #f1f5f9" }}>
+                <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#f0fdf4", display: "grid", placeItems: "center", color: "#16a34a" }}>
+                  <Phone size={18} />
+                </div>
+                <div>
+                  <h2 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#0f172a", margin: 0 }}>
+                    3. Contato & Instruções aos Doadores
+                  </h2>
+                  <p style={{ fontSize: "0.82rem", color: "#64748b", margin: 0 }}>
+                    Telefone de retorno onde os voluntários confirmarão presença
+                  </p>
+                </div>
               </div>
 
-              <div className="field" style={{ marginTop: "18px" }}>
-                <label htmlFor="ajudaMensagem">Detalhes adicionais <span className="opt">(opcional)</span></label>
+              <div style={{ marginBottom: "18px" }}>
+                <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>
+                  Telefone / WhatsApp de Contato Oficial *
+                </label>
+                <div style={{ position: "relative" }}>
+                  <Phone size={18} color="#16a34a" style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }} />
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    value={formData.ajudaContato}
+                    onChange={(e) => setFormData({ ...formData, ajudaContato: maskPhone(e.target.value) })}
+                    placeholder="(83) 99999-9999"
+                    maxLength={16}
+                    style={{
+                      width: "100%",
+                      padding: "11px 14px 11px 38px",
+                      borderRadius: "10px",
+                      border: errors.ajudaContato ? "1.5px solid #dc2626" : "1.5px solid #cbd5e1",
+                      fontSize: "0.95rem",
+                      fontWeight: 700,
+                    }}
+                  />
+                </div>
+                <small style={{ display: "block", color: "#64748b", fontSize: "0.78rem", marginTop: "4px" }}>
+                  Os voluntários que receberem a mensagem responderão diretamente a este número
+                </small>
+                {errors.ajudaContato && <small style={{ color: "#dc2626", fontSize: "0.8rem", marginTop: "4px", display: "block" }}>{errors.ajudaContato}</small>}
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>
+                  Instruções Clínicas ou Observações <span style={{ color: "#94a3b8", fontWeight: 400 }}>(opcional)</span>
+                </label>
                 <textarea
-                  id="ajudaMensagem"
                   rows={3}
                   value={formData.ajudaMensagem}
                   onChange={(e) => setFormData({ ...formData, ajudaMensagem: e.target.value })}
-                  placeholder="Informações extras (cirurgia, compatibilidade, etc...)..."
+                  placeholder="Ex: Levar documento oficial com foto e informar na recepção que a doação é em nome do paciente X na UTI Adulto..."
                   style={{
-                    resize: "vertical",
-                    fontFamily: "var(--font-body)",
-                    fontSize: "1rem",
-                    color: "var(--ink)",
-                    border: "1.5px solid var(--line)",
-                    borderRadius: "var(--r-sm)",
-                    padding: "12px 14px",
                     width: "100%",
+                    padding: "12px 14px",
+                    borderRadius: "10px",
+                    border: "1.5px solid #cbd5e1",
+                    fontSize: "0.88rem",
+                    resize: "vertical",
+                    lineHeight: 1.5,
                   }}
-                ></textarea>
-                <small style={{ display: "block", color: "var(--muted)", fontSize: "0.8rem", marginTop: "4px" }}>
-                  Informações que ajudem os doadores a entender melhor o caso
-                </small>
+                />
               </div>
             </div>
 
-            <div className="form__actions">
+            {/* Ações do Formulário */}
+            <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", alignItems: "center" }}>
               <button
                 type="button"
-                onClick={() => setFormData({
-                  ajudaTipo: "O+",
-                  ajudaQuantidade: 1,
-                  ajudaUrgencia: "CRÍTICA",
-                  ajudaCidade: "São Paulo",
-                  ajudaEstado: "SP",
-                  ajudaPaciente: "",
-                  ajudaContato: "",
-                  ajudaMensagem: "",
-                })}
-                className="btn btn--ghost"
+                onClick={handleReset}
+                style={{
+                  background: "#f1f5f9",
+                  color: "#475569",
+                  border: "1px solid #cbd5e1",
+                  padding: "12px 22px",
+                  borderRadius: "12px",
+                  fontWeight: 600,
+                  fontSize: "0.92rem",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
               >
-                Limpar
+                <RotateCcw size={16} />
+                <span>Limpar Campos</span>
               </button>
-              <button type="submit" disabled={loading} className="btn btn--primary" style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
-                <Siren size={18} />
-                <span>{loading ? "Calculando compatibilidade..." : "Alertar Doadores da Região"}</span>
-                <ArrowRight size={16} />
+
+              <button
+                type="submit"
+                disabled={loading}
+                style={{
+                  background: "linear-gradient(135deg, #dc2626, #991b1b)",
+                  color: "#ffffff",
+                  border: "none",
+                  padding: "14px 32px",
+                  borderRadius: "12px",
+                  fontWeight: 800,
+                  fontSize: "1rem",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  boxShadow: "0 6px 20px rgba(220, 38, 38, 0.4)",
+                  transition: "transform 0.15s, opacity 0.2s",
+                }}
+              >
+                <Siren size={20} />
+                <span>{loading ? "Calculando compatibilidade..." : "Prosseguir com Alerta SOS"}</span>
+                <ArrowRight size={18} />
               </button>
             </div>
           </form>
+        </div>
 
-          {/* Resultado do Envio com Link Direto para WhatsApp */}
-          {createdEmergency && (
-            <div style={{ marginTop: "30px", padding: "24px", background: "#e7f4ec", border: "2px solid #1e7a4d", borderRadius: "12px" }}>
-              <h4 style={{ color: "#1e7a4d", fontWeight: 800, margin: "0 0 10px", fontSize: "1.1rem", display: "flex", alignItems: "center", gap: "8px" }}>
-                <CheckCircle2 size={20} />
-                <span>Solicitação registrada no banco de dados com sucesso!</span>
-              </h4>
-              <p style={{ fontSize: "0.95rem", color: "#1c1418", marginBottom: "16px" }}>
-                Foram identificados <strong>{createdEmergency.doadoresAptosNotificados} doadores compatíveis</strong> no estado de {createdEmergency.estado}.
-              </p>
-              <a
-                href={createdEmergency.whatsappShareLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn--primary"
-                style={{ background: "#25D366", borderColor: "#25D366", color: "white", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px", padding: "12px 24px" }}
-              >
-                <MessageSquare size={18} />
-                <span>Abrir WhatsApp e Disparar Alerta Oficial</span>
-              </a>
+        {/* ===================== COLUNA DIREITA: RADAR AO VIVO & SIMULADOR WHATSAPP ===================== */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "24px", position: "sticky", top: "20px" }}>
+          
+          {/* RADAR DE DOADORES APTOS NA REGIÃO */}
+          <div
+            style={{
+              background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
+              color: "#ffffff",
+              borderRadius: "20px",
+              padding: "26px",
+              boxShadow: "0 12px 30px rgba(15, 23, 42, 0.25)",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+              position: "relative",
+              overflow: "hidden",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 10px #22c55e" }} />
+                <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#86efac", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                  Radar de Compatibilidade
+                </span>
+              </div>
+              <Activity size={18} color="#86efac" />
             </div>
-          )}
 
-          {/* Preview de mensagem em tempo real */}
-          <div className="ajuda-preview" style={{ display: "block" }}>
-            <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.3rem", color: "var(--blood)", margin: "30px 0 15px", display: "flex", alignItems: "center", gap: "8px" }}>
-              <MessageSquare size={20} />
-              <span>Mensagem que será enviada</span>
-            </h3>
+            <div style={{ margin: "20px 0" }}>
+              <div style={{ fontSize: "3rem", fontWeight: 900, lineHeight: 1, fontFamily: "var(--font-display)", color: "#ffffff", display: "flex", alignItems: "baseline", gap: "8px" }}>
+                <span>{loadingCompat ? "..." : compatibility?.totalAptos ?? 0}</span>
+                <span style={{ fontSize: "1.1rem", fontWeight: 500, color: "#94a3b8" }}>doadores aptos</span>
+              </div>
+              <p style={{ color: "#94a3b8", fontSize: "0.85rem", marginTop: "8px" }}>
+                Cadastrados em <strong>{formData.ajudaCidade ? `${formData.ajudaCidade}, ` : ""}{formData.ajudaEstado}</strong> prontos para receber alerta
+              </p>
+            </div>
+
+            {/* Grupos compatíveis para a bolsa selecionada */}
+            <div style={{ background: "rgba(255, 255, 255, 0.06)", borderRadius: "12px", padding: "14px", border: "1px solid rgba(255, 255, 255, 0.08)" }}>
+              <div style={{ fontSize: "0.78rem", textTransform: "uppercase", color: "#cbd5e1", fontWeight: 700, marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
+                <Droplet size={14} color="#f43f5e" />
+                <span>Quem pode doar para receptor {formData.ajudaTipo}:</span>
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                {compatibility && compatibility.tiposCompativeis.length > 0 ? (
+                  compatibility.tiposCompativeis.map((t) => (
+                    <span
+                      key={t}
+                      style={{
+                        background: t === formData.ajudaTipo ? "rgba(225, 29, 72, 0.4)" : "rgba(255, 255, 255, 0.12)",
+                        border: t === formData.ajudaTipo ? "1px solid #f43f5e" : "1px solid rgba(255, 255, 255, 0.15)",
+                        color: "#ffffff",
+                        padding: "3px 10px",
+                        borderRadius: "8px",
+                        fontSize: "0.8rem",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {t}
+                    </span>
+                  ))
+                ) : (
+                  <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Calculando compatibilidade...</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* SIMULADOR VISUAL DO WHATSAPP */}
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: "20px",
+              padding: "24px",
+              border: "1px solid #e2e8f0",
+              boxShadow: "0 4px 20px rgba(0, 0, 0, 0.04)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#25D366", display: "grid", placeItems: "center", color: "#fff" }}>
+                  <MessageSquare size={16} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: "0.95rem", fontWeight: 800, color: "#0f172a", margin: 0 }}>
+                    Simulador do WhatsApp
+                  </h3>
+                  <p style={{ fontSize: "0.75rem", color: "#64748b", margin: 0 }}>
+                    Pré-visualização da mensagem recebida pelo voluntário
+                  </p>
+                </div>
+              </div>
+              <span style={{ fontSize: "0.72rem", background: "#f1f5f9", padding: "2px 8px", borderRadius: "6px", fontWeight: 600, color: "#475569" }}>
+                Tempo Real
+              </span>
+            </div>
+
+            {/* Balão do WhatsApp estilizado */}
             <div
-              className="ajuda-message"
               style={{
-                background: "rgba(200, 30, 60, 0.06)",
-                borderLeft: "4px solid var(--blood)",
-                padding: "16px 20px",
-                borderRadius: "var(--r-md)",
-                fontFamily: "monospace",
-                whiteSpace: "pre-wrap",
-                lineHeight: "1.6",
-                color: "var(--ink)",
-                maxHeight: "300px",
-                overflowY: "auto",
-                fontSize: "0.92rem",
+                background: "#efeae2",
+                borderRadius: "16px",
+                padding: "16px",
+                position: "relative",
               }}
             >
-              {previewMessage}
+              <div
+                style={{
+                  background: "#ffffff",
+                  borderRadius: "12px 12px 12px 2px",
+                  padding: "14px 16px",
+                  boxShadow: "0 2px 6px rgba(0, 0, 0, 0.08)",
+                  fontSize: "0.85rem",
+                  lineHeight: 1.5,
+                  color: "#111827",
+                  whiteSpace: "pre-wrap",
+                  fontFamily: "system-ui, -apple-system, sans-serif",
+                  maxHeight: "360px",
+                  overflowY: "auto",
+                }}
+              >
+                {previewMessage}
+                <div style={{ textAlign: "right", marginTop: "8px", fontSize: "0.7rem", color: "#9ca3af", display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "4px" }}>
+                  <span>Agora</span>
+                  <Check size={13} color="#25D366" />
+                </div>
+              </div>
             </div>
-            <p style={{ color: "var(--muted)", fontSize: "0.9rem", marginTop: "15px", display: "flex", alignItems: "center", gap: "8px" }}>
-              <CheckCircle2 size={16} color="var(--success)" />
+
+            <div style={{ marginTop: "16px", paddingTop: "14px", borderTop: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: "8px", fontSize: "0.78rem", color: "#64748b" }}>
+              <Info size={15} color="#0284c7" style={{ flexShrink: 0 }} />
               <span>
-                Serão notificados: <strong id="doadoresToNotify" style={{ color: "var(--blood)", fontSize: "1.1rem" }}>{compatibility?.totalAptos ?? 0}</strong> doador(es) aptos da região
+                Mensagens oficiais do HemoAlerta são padronizadas para máxima taxa de leitura e resposta rápida.
               </span>
-            </p>
-            {compatibility && compatibility.tiposCompativeis.length > 0 && (
-              <span style={{ display: "block", marginTop: "4px", fontSize: "0.85rem", color: "var(--muted)", paddingLeft: "24px" }}>
-                Tipos compatíveis aptos: {compatibility.tiposCompativeis.join(", ")}
-              </span>
-            )}
+            </div>
           </div>
         </div>
       </div>
+
+      {/* ======================= MODAL DE CONFIRMAÇÃO SOS ======================= */}
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        title="Confirmar Disparo de Emergência SOS"
+        type="danger"
+        confirmText="Sim, Disparar Alerta SOS"
+        cancelText="Revisar Dados"
+        onConfirm={handleExecuteSend}
+        onClose={() => setShowConfirmModal(false)}
+        message={
+          <div>
+            <p>
+              Você está prestes a emitir um alerta de emergência para <strong>{compatibility?.totalAptos ?? 0} doadores compatíveis</strong> em <strong>{formData.ajudaCidade}/{formData.ajudaEstado}</strong>.
+            </p>
+            <div
+              style={{
+                marginTop: "12px",
+                padding: "12px",
+                background: "#fef2f2",
+                borderRadius: "10px",
+                border: "1px solid #fecdd3",
+                fontSize: "0.84rem",
+                color: "#991b1b",
+              }}
+            >
+              <div><strong>Tipo Sanguíneo:</strong> {formData.ajudaTipo} ({formData.ajudaQuantidade} bolsa(s))</div>
+              <div><strong>Urgência:</strong> {formData.ajudaUrgencia}</div>
+              <div><strong>Paciente / Unidade:</strong> {formData.ajudaPaciente}</div>
+              <div><strong>Telefone de Retorno:</strong> {formData.ajudaContato}</div>
+            </div>
+            <p style={{ marginTop: "10px", fontSize: "0.8rem", color: "#64748b" }}>
+              Por favor, confirme apenas se as informações forem verídicas e condizentes com a necessidade médica.
+            </p>
+          </div>
+        }
+      />
     </div>
   );
 }
