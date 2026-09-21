@@ -332,77 +332,123 @@ _Sua doação pode salvar uma vida agora mesmo. Compareça ao local informado ou
         </div>
       </section>
 
-      {/* ======================= TELA DE CONFIRMAÇÃO PÓS-ENVIO (PENDENTE) ======================= */}
+      {/* ======================= TELA DE CONFIRMAÇÃO PÓS-ENVIO ======================= */}
       {createdEmergency && (
         <div
           style={{
-            background: "linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)",
-            border: "2px solid #fde68a",
+            background: "linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%)",
+            border: "2px solid #86efac",
             borderRadius: "20px",
             padding: "28px",
             marginBottom: "32px",
-            boxShadow: "0 10px 25px -5px rgba(217, 119, 6, 0.15)",
+            boxShadow: "0 10px 25px -5px rgba(22, 163, 74, 0.12)",
           }}
         >
           <div style={{ display: "flex", alignItems: "flex-start", gap: "18px" }}>
-            <div style={{ width: "52px", height: "52px", borderRadius: "16px", background: "#f59e0b", display: "grid", placeItems: "center", color: "#fff", flexShrink: 0, boxShadow: "0 6px 16px rgba(245, 158, 11, 0.35)" }}>
-              <Clock size={28} />
+            <div
+              style={{
+                width: "52px",
+                height: "52px",
+                borderRadius: "16px",
+                background: "linear-gradient(135deg, #16a34a, #15803d)",
+                display: "grid",
+                placeItems: "center",
+                color: "#ffffff",
+                flexShrink: 0,
+                boxShadow: "0 6px 16px rgba(22, 163, 74, 0.28)",
+              }}
+            >
+              <CheckCircle2 size={30} />
             </div>
+
             <div style={{ flex: 1 }}>
-              <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "#fef9c3", border: "1px solid #facc15", color: "#854d0e", padding: "4px 12px", borderRadius: "20px", fontSize: "0.78rem", fontWeight: 800, textTransform: "uppercase", marginBottom: "8px" }}>
-                <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#eab308" }} />
-                <span>Status: PENDENTE DE APROVAÇÃO</span>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "#dcfce7", border: "1px solid #86efac", color: "#166534", padding: "4px 12px", borderRadius: "20px", fontSize: "0.78rem", fontWeight: 800, textTransform: "uppercase", marginBottom: "8px" }}>
+                <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#22c55e" }} />
+                <span>Enviado para o Sistema — Aguardando Triagem</span>
               </div>
 
-              <h2 style={{ fontSize: "1.4rem", fontWeight: 800, color: "#78350f", margin: "0 0 6px 0" }}>
-                Solicitação #{createdEmergency.id} Encaminhada para a Moderação!
+              <h2 style={{ fontSize: "1.45rem", fontWeight: 800, color: "#14532d", margin: "0 0 8px 0" }}>
+                Solicitação #{createdEmergency.id} Enviada com Sucesso!
               </h2>
-              <p style={{ color: "#92400e", fontSize: "0.95rem", margin: "0 0 16px 0", lineHeight: 1.5 }}>
-                A solicitação foi registrada no banco de dados. Por motivos de segurança contra fraudes e spam, <strong>as mensagens NÃO foram disparadas de imediato</strong>. O administrador do Hemocentro validará a demanda no painel administrativo e acionará o(s) <strong>{createdEmergency.doadoresAptosNotificados} {createdEmergency.doadoresAptosNotificados === 1 ? "doador compatível" : "doadores compatíveis"}</strong> em <strong>{createdEmergency.cidade}, {createdEmergency.estado}</strong> enviando a arte oficial com os dados do <strong>{createdEmergency.hospital || "Hospital"}</strong>.
+
+              <p style={{ color: "#166534", fontSize: "0.98rem", margin: "0 0 16px 0", lineHeight: 1.6, maxWidth: "800px" }}>
+                Sua solicitação já está registrada em nosso sistema. Nossa equipe do Hemocentro / Central SOS está conferindo as informações médicas e, <strong>em breve, realizará o aviso e a mobilização direta dos doadores compatíveis da região via WhatsApp</strong> com a arte oficial de convocação.
               </p>
 
-              <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
-                <a
-                  href="/admin"
-                  style={{
-                    background: "linear-gradient(135deg, #0f172a, #1e293b)",
-                    color: "#ffffff",
-                    textDecoration: "none",
-                    padding: "12px 22px",
-                    borderRadius: "10px",
-                    fontWeight: 700,
-                    fontSize: "0.92rem",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    boxShadow: "0 4px 14px rgba(15, 23, 42, 0.2)",
-                  }}
-                >
-                  <ShieldCheck size={18} color="#38bdf8" />
-                  <span>Acessar Painel do Admin para Liberar</span>
-                  <ExternalLink size={14} />
-                </a>
+              {/* Detalhes do Chamado Registrado */}
+              <div
+                style={{
+                  background: "#ffffff",
+                  border: "1px solid #bbf7d0",
+                  borderRadius: "12px",
+                  padding: "14px 18px",
+                  marginBottom: "20px",
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                  gap: "12px",
+                  fontSize: "0.86rem",
+                  color: "#334155",
+                }}
+              >
+                <div>
+                  <span style={{ color: "#64748b", display: "block", fontSize: "0.75rem", textTransform: "uppercase", fontWeight: 700 }}>Hospital de Atendimento:</span>
+                  <strong style={{ color: "#0f172a" }}>{createdEmergency.hospital || "Hospital de Referência"}</strong>
+                </div>
+                <div>
+                  <span style={{ color: "#64748b", display: "block", fontSize: "0.75rem", textTransform: "uppercase", fontWeight: 700 }}>Tipo & Quantidade:</span>
+                  <strong style={{ color: "#dc2626", fontSize: "0.98rem" }}>{createdEmergency.tipo}</strong> ({createdEmergency.quantidade} bolsa(s))
+                </div>
+                <div>
+                  <span style={{ color: "#64748b", display: "block", fontSize: "0.75rem", textTransform: "uppercase", fontWeight: 700 }}>Localidade:</span>
+                  <strong style={{ color: "#0f172a" }}>{createdEmergency.cidade}, {createdEmergency.estado}</strong>
+                </div>
+                <div>
+                  <span style={{ color: "#64748b", display: "block", fontSize: "0.75rem", textTransform: "uppercase", fontWeight: 700 }}>Doadores Mapeados:</span>
+                  <strong style={{ color: "#166534" }}>{createdEmergency.doadoresAptosNotificados} {createdEmergency.doadoresAptosNotificados === 1 ? "voluntário apto" : "voluntários aptos"}</strong>
+                </div>
+              </div>
 
+              <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
                 <button
                   type="button"
                   onClick={handleReset}
                   style={{
-                    background: "#ffffff",
-                    color: "#78350f",
-                    border: "1.5px solid #fde68a",
-                    padding: "12px 20px",
+                    background: "#16a34a",
+                    color: "#ffffff",
+                    border: "none",
+                    padding: "12px 22px",
                     borderRadius: "10px",
-                    fontWeight: 600,
+                    fontWeight: 700,
                     fontSize: "0.92rem",
                     cursor: "pointer",
                     display: "inline-flex",
                     alignItems: "center",
                     gap: "6px",
+                    boxShadow: "0 4px 12px rgba(22, 163, 74, 0.25)",
                   }}
                 >
                   <Plus size={16} />
                   <span>Cadastrar Outra Solicitação</span>
                 </button>
+
+                <a
+                  href="/"
+                  style={{
+                    background: "#ffffff",
+                    color: "#166534",
+                    border: "1.5px solid #86efac",
+                    padding: "11px 20px",
+                    borderRadius: "10px",
+                    fontWeight: 600,
+                    fontSize: "0.92rem",
+                    textDecoration: "none",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                  }}
+                >
+                  <span>Voltar para a Página Inicial</span>
+                </a>
               </div>
             </div>
           </div>

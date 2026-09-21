@@ -57,7 +57,7 @@ export default function RedePage() {
               <Globe size={30} color="var(--blood)" />
               <span>Rede Nacional de Doadores</span>
             </h1>
-            <p>Mapa interativo da cobertura HemoAlerta em tempo real — Banco de dados SQLite</p>
+            <p>Mapa interativo da cobertura e voluntários ativos em tempo real em todo o Brasil</p>
           </div>
 
           <div className="rede-stats">

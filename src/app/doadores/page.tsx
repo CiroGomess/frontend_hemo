@@ -71,7 +71,7 @@ export default function DoadoresPage() {
           <div>
             <h2>Doadores cadastrados</h2>
             <p id="panelSub">
-              Banco de dados relacional SQLite (<code>hemoalerta.db</code>) — consulta e filtros em tempo real.
+              Rede oficial de voluntários cadastrados em todo o território nacional — consulta e filtros em tempo real.
             </p>
           </div>
           <div className="panel__tools">

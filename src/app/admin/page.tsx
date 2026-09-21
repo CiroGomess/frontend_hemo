@@ -54,6 +54,7 @@ import {
   Ban,
   Users,
   Image as ImageIcon,
+  Calendar,
 } from "lucide-react";
 import ConfirmModal from "@/components/ConfirmModal";
 
@@ -61,6 +62,22 @@ const UFS = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA",
   "PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"
 ];
+
+function formatEmergencyDate(dateStr?: string) {
+  if (!dateStr) return "Data recente";
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
+    const hours = String(d.getHours()).padStart(2, "0");
+    const mins = String(d.getMinutes()).padStart(2, "0");
+    return `${day}/${month}/${year} às ${hours}:${mins}`;
+  } catch {
+    return dateStr;
+  }
+}
 
 export default function AdminPage() {
   const [isLogged, setIsLogged] = useState(false);
@@ -101,6 +118,7 @@ export default function AdminPage() {
   const [emergenciesList, setEmergenciesList] = useState<EmergencyResponse[]>([]);
   const [emergenciesLoading, setEmergenciesLoading] = useState(false);
   const [emergencyStatusFilter, setEmergencyStatusFilter] = useState<string>("PENDENTE");
+  const [emergencySearchQuery, setEmergencySearchQuery] = useState("");
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [emergencySubTab, setEmergencySubTab] = useState<"moderacao" | "manual">("moderacao");
@@ -1456,8 +1474,67 @@ export default function AdminPage() {
                     boxShadow: "0 8px 24px rgba(0, 0, 0, 0.04)",
                   }}
                 >
-                  {/* Filtros e Barra de Ações */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "14px", marginBottom: "24px" }}>
+                  {/* Cabeçalho da Seção de Moderação */}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      flexWrap: "wrap",
+                      gap: "16px",
+                      marginBottom: "20px",
+                    }}
+                  >
+                    <div>
+                      <h2 style={{ fontSize: "1.25rem", fontWeight: 800, color: "#0f172a", margin: "0 0 4px 0" }}>
+                        Fila de Moderação e Disparo de Chamados SOS
+                      </h2>
+                      <p style={{ color: "#64748b", fontSize: "0.85rem", margin: 0 }}>
+                        Revise e autorize solicitações de emergência com disparo individual e seguro para doadores compatíveis.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={loadAdminEmergencies}
+                      disabled={emergenciesLoading}
+                      style={{
+                        background: "#ffffff",
+                        color: "#475569",
+                        border: "1px solid #cbd5e1",
+                        padding: "8px 16px",
+                        borderRadius: "10px",
+                        fontSize: "0.82rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      <RefreshCw size={14} className={emergenciesLoading ? "animate-spin" : ""} />
+                      <span>{emergenciesLoading ? "Atualizando..." : "Recarregar Lista"}</span>
+                    </button>
+                  </div>
+
+                  {/* Barra de Filtros por Status & Busca Rápida */}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      gap: "12px",
+                      padding: "14px 16px",
+                      background: "#f8fafc",
+                      borderRadius: "14px",
+                      border: "1px solid #e2e8f0",
+                      marginBottom: "22px",
+                    }}
+                  >
+                    {/* Status Tabs */}
                     <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                       {[
                         { id: "PENDENTE", label: "Aguardando Aprovação", count: emergenciesList.filter((e) => (e.status || "PENDENTE") === "PENDENTE").length, color: "#d97706", bg: "#fef3c7" },
@@ -1472,7 +1549,7 @@ export default function AdminPage() {
                             type="button"
                             onClick={() => setEmergencyStatusFilter(filtro.id)}
                             style={{
-                              background: isSelected ? "#0f172a" : "#f8fafc",
+                              background: isSelected ? "#0f172a" : "#ffffff",
                               color: isSelected ? "#ffffff" : "#475569",
                               border: isSelected ? "1px solid #0f172a" : "1px solid #cbd5e1",
                               padding: "7px 14px",
@@ -1482,7 +1559,9 @@ export default function AdminPage() {
                               cursor: "pointer",
                               display: "inline-flex",
                               alignItems: "center",
-                              gap: "6px",
+                              gap: "7px",
+                              boxShadow: isSelected ? "0 2px 6px rgba(15, 23, 42, 0.15)" : "none",
+                              transition: "all 0.15s ease",
                             }}
                           >
                             <span>{filtro.label}</span>
@@ -1490,7 +1569,7 @@ export default function AdminPage() {
                               style={{
                                 background: isSelected ? "rgba(255,255,255,0.2)" : filtro.bg,
                                 color: isSelected ? "#ffffff" : filtro.color,
-                                padding: "1px 6px",
+                                padding: "2px 7px",
                                 borderRadius: "6px",
                                 fontSize: "0.72rem",
                                 fontWeight: 800,
@@ -1503,295 +1582,606 @@ export default function AdminPage() {
                       })}
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={loadAdminEmergencies}
-                      disabled={emergenciesLoading}
-                      style={{
-                        background: "#ffffff",
-                        color: "#475569",
-                        border: "1px solid #cbd5e1",
-                        padding: "8px 14px",
-                        borderRadius: "8px",
-                        fontSize: "0.82rem",
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "6px",
-                      }}
-                    >
-                      <RefreshCw size={14} className={emergenciesLoading ? "animate-spin" : ""} />
-                      <span>{emergenciesLoading ? "Atualizando..." : "Recarregar Lista"}</span>
-                    </button>
+                    {/* Busca Rápida em Tempo Real */}
+                    <div style={{ position: "relative", minWidth: "260px", flex: "1 1 260px", maxWidth: "420px" }}>
+                      <Search
+                        size={15}
+                        color="#94a3b8"
+                        style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }}
+                      />
+                      <input
+                        type="text"
+                        value={emergencySearchQuery}
+                        onChange={(e) => setEmergencySearchQuery(e.target.value)}
+                        placeholder="Buscar hospital, paciente, tipo ou ID..."
+                        style={{
+                          width: "100%",
+                          padding: "8px 32px 8px 34px",
+                          borderRadius: "8px",
+                          border: "1px solid #cbd5e1",
+                          fontSize: "0.82rem",
+                          background: "#ffffff",
+                          color: "#1e293b",
+                          outline: "none",
+                        }}
+                      />
+                      {emergencySearchQuery && (
+                        <button
+                          type="button"
+                          onClick={() => setEmergencySearchQuery("")}
+                          style={{
+                            position: "absolute",
+                            right: "8px",
+                            top: "50%",
+                            transform: "translateY(-50%)",
+                            background: "transparent",
+                            border: "none",
+                            color: "#94a3b8",
+                            cursor: "pointer",
+                            padding: "2px",
+                            display: "flex",
+                            alignItems: "center",
+                          }}
+                        >
+                          <X size={14} />
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Lista de Chamados */}
                   {emergenciesLoading ? (
                     <div style={{ textAlign: "center", padding: "60px 20px", color: "#64748b" }}>
-                      <Clock size={28} className="animate-spin" style={{ margin: "0 auto 12px" }} />
-                      <p>Carregando solicitações da base de dados...</p>
+                      <Clock size={32} className="animate-spin" style={{ margin: "0 auto 12px", color: "#3b82f6" }} />
+                      <p style={{ fontWeight: 600 }}>Carregando solicitações da base de dados...</p>
                     </div>
-                  ) : emergenciesList.length === 0 ? (
-                    <div
-                      style={{
-                        textAlign: "center",
-                        padding: "48px 24px",
-                        background: "#f8fafc",
-                        borderRadius: "16px",
-                        border: "1.5px dashed #cbd5e1",
-                      }}
-                    >
-                      <CheckCircle2 size={40} color="#16a34a" style={{ margin: "0 auto 12px" }} />
-                      <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#0f172a", margin: "0 0 6px 0" }}>
-                        Nenhuma solicitação encontrada
-                      </h3>
-                      <p style={{ color: "#64748b", fontSize: "0.88rem", margin: 0 }}>
-                        {emergencyStatusFilter
-                          ? `Não há chamados com status "${emergencyStatusFilter}".`
-                          : "Nenhum chamado de emergência foi cadastrado ainda."}
-                      </p>
-                    </div>
-                  ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                      {emergenciesList.map((emg) => {
-                        const status = emg.status || "PENDENTE";
-                        const isPending = status === "PENDENTE";
-                        const isDispatched = status === "DISPARADO";
-                        const isCancelled = status === "CANCELADO";
+                  ) : (() => {
+                    const filteredEmergencies = emergenciesList.filter((emg) => {
+                      if (!emergencySearchQuery.trim()) return true;
+                      const q = emergencySearchQuery.toLowerCase();
+                      const idStr = String(emg.id || "").toLowerCase();
+                      const hosp = String(emg.hospital || "").toLowerCase();
+                      const pac = String(emg.paciente || "").toLowerCase();
+                      const cid = String(emg.cidade || "").toLowerCase();
+                      const est = String(emg.estado || "").toLowerCase();
+                      const tp = String(emg.tipo || "").toLowerCase();
+                      const cont = String(emg.contato || "").toLowerCase();
+                      return idStr.includes(q) || hosp.includes(q) || pac.includes(q) || cid.includes(q) || est.includes(q) || tp.includes(q) || cont.includes(q);
+                    });
 
-                        return (
-                          <div
-                            key={emg.id}
-                            style={{
-                              background: isPending ? "#fffdfa" : "#ffffff",
-                              borderRadius: "16px",
-                              border: isPending
-                                ? "2px solid #fde68a"
-                                : isDispatched
-                                ? "1.5px solid #bbf7d0"
-                                : "1px solid #e2e8f0",
-                              padding: "20px 24px",
-                              boxShadow: isPending ? "0 4px 14px rgba(245, 158, 11, 0.08)" : "0 2px 8px rgba(0,0,0,0.02)",
-                              display: "grid",
-                              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-                              gap: "20px",
-                              alignItems: "center",
-                            }}
-                          >
-                            {/* Bloco 1: Dados do Hospital, Paciente e Localização */}
-                            <div>
-                              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
-                                <span style={{ fontSize: "0.75rem", fontFamily: "monospace", background: "#f1f5f9", padding: "2px 6px", borderRadius: "4px", color: "#475569" }}>
-                                  #{emg.id}
-                                </span>
+                    if (filteredEmergencies.length === 0) {
+                      return (
+                        <div
+                          style={{
+                            textAlign: "center",
+                            padding: "48px 24px",
+                            background: "#f8fafc",
+                            borderRadius: "16px",
+                            border: "1.5px dashed #cbd5e1",
+                          }}
+                        >
+                          <CheckCircle2 size={40} color="#16a34a" style={{ margin: "0 auto 12px" }} />
+                          <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#0f172a", margin: "0 0 6px 0" }}>
+                            Nenhuma solicitação encontrada
+                          </h3>
+                          <p style={{ color: "#64748b", fontSize: "0.88rem", margin: 0 }}>
+                            {emergencySearchQuery
+                              ? `Nenhum chamado corresponde aos termos da pesquisa "${emergencySearchQuery}".`
+                              : emergencyStatusFilter
+                              ? `Não há chamados com status "${emergencyStatusFilter}".`
+                              : "Nenhum chamado de emergência foi cadastrado ainda."}
+                          </p>
+                          {emergencySearchQuery && (
+                            <button
+                              type="button"
+                              onClick={() => setEmergencySearchQuery("")}
+                              style={{
+                                marginTop: "12px",
+                                background: "#ffffff",
+                                border: "1px solid #cbd5e1",
+                                padding: "6px 12px",
+                                borderRadius: "8px",
+                                fontSize: "0.8rem",
+                                fontWeight: 600,
+                                color: "#475569",
+                                cursor: "pointer",
+                              }}
+                            >
+                              Limpar Pesquisa
+                            </button>
+                          )}
+                        </div>
+                      );
+                    }
 
-                                {/* Status Badge */}
-                                {isPending && (
-                                  <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", background: "#fef3c7", color: "#92400e", border: "1px solid #fde68a", padding: "2px 8px", borderRadius: "12px", fontSize: "0.72rem", fontWeight: 800 }}>
-                                    <Clock size={12} />
-                                    <span>PENDENTE DE APROVAÇÃO</span>
-                                  </span>
-                                )}
-                                {isDispatched && (
-                                  <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", background: "#dcfce7", color: "#166534", border: "1px solid #86efac", padding: "2px 8px", borderRadius: "12px", fontSize: "0.72rem", fontWeight: 800 }}>
-                                    <CheckCheck size={12} />
-                                    <span>DISPARADO VIA WHATSAPP</span>
-                                  </span>
-                                )}
-                                {isCancelled && (
-                                  <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", background: "#f1f5f9", color: "#64748b", border: "1px solid #cbd5e1", padding: "2px 8px", borderRadius: "12px", fontSize: "0.72rem", fontWeight: 700 }}>
-                                    <Ban size={12} />
-                                    <span>CANCELADO</span>
-                                  </span>
-                                )}
+                    return (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                        {filteredEmergencies.map((emg) => {
+                          const status = emg.status || "PENDENTE";
+                          const isPending = status === "PENDENTE";
+                          const isDispatched = status === "DISPARADO";
+                          const isCancelled = status === "CANCELADO";
 
-                                <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
-                                  {emg.criadoEm || "Hoje"}
-                                </span>
-                              </div>
+                          const urgencia = emg.urgencia || "CRÍTICA";
+                          const urgencyColor = urgencia === "CRÍTICA" ? "#dc2626" : urgencia === "ALTA" ? "#ea580c" : "#d97706";
+                          const urgencyBg = urgencia === "CRÍTICA" ? "#fef2f2" : urgencia === "ALTA" ? "#fff7ed" : "#fefce8";
+                          const urgencyBorder = urgencia === "CRÍTICA" ? "#fecaca" : urgencia === "ALTA" ? "#fed7aa" : "#fef08a";
 
-                              <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "#0f172a", margin: "0 0 4px 0", display: "flex", alignItems: "center", gap: "6px" }}>
-                                <Building2 size={16} color="#dc2626" />
-                                <span>{emg.hospital || "Hospital Regional"}</span>
-                              </h3>
+                          const accentBorderLeft = isPending
+                            ? `5px solid ${urgencyColor}`
+                            : isDispatched
+                            ? "5px solid #10b981"
+                            : "5px solid #94a3b8";
 
-                              <div style={{ fontSize: "0.85rem", color: "#475569", display: "flex", flexDirection: "column", gap: "3px" }}>
-                                <div>
-                                  <MapPin size={13} style={{ display: "inline", marginRight: "4px", verticalAlign: "middle" }} />
-                                  <span>{emg.cidade}, <strong>{emg.estado}</strong></span>
-                                </div>
-                                <div>
-                                  <User size={13} style={{ display: "inline", marginRight: "4px", verticalAlign: "middle" }} />
-                                  <span>Paciente / Leito: <strong>{emg.paciente}</strong></span>
-                                </div>
-                                <div>
-                                  <Phone size={13} style={{ display: "inline", marginRight: "4px", verticalAlign: "middle" }} />
-                                  <span>Contato: <strong>{emg.contato}</strong></span>
-                                </div>
-                              </div>
+                          const donorsCount = emg.doadoresAptosNotificados || 0;
+                          const donorLabel =
+                            donorsCount === 1
+                              ? "1 doador compatível mapeado"
+                              : `${donorsCount} doadores compatíveis mapeados`;
 
-                              {/* Histórico de aprovação / disparos */}
-                              {isDispatched && (
-                                <div style={{ marginTop: "10px", padding: "8px 10px", background: "#f0fdf4", borderRadius: "8px", border: "1px solid #bbf7d0", fontSize: "0.78rem", color: "#166534" }}>
-                                  Disparo realizado por <strong>{emg.aprovadoPor || "Admin"}</strong> em {emg.aprovadoEm || "Data recente"}.
-                                  {emg.disparosSucesso !== undefined && (
-                                    <span> • <strong>{emg.disparosSucesso} enviadas</strong></span>
-                                  )}
-                                </div>
-                              )}
-                            </div>
+                          const cleanId = String(emg.id).replace(/^SOS-/, "");
 
-                            {/* Bloco 2: Tipo Sanguíneo, Urgência e Doadores Aptos */}
-                            <div>
-                              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
-                                <span
-                                  style={{
-                                    background: "linear-gradient(135deg, #dc2626, #b91c1c)",
-                                    color: "#ffffff",
-                                    padding: "6px 14px",
-                                    borderRadius: "10px",
-                                    fontSize: "1.2rem",
-                                    fontWeight: 900,
-                                    boxShadow: "0 4px 10px rgba(220, 38, 38, 0.25)",
-                                  }}
-                                >
-                                  {emg.tipo}
-                                </span>
-                                <span style={{ fontSize: "0.88rem", fontWeight: 700, color: "#0f172a" }}>
-                                  {emg.quantidade} bolsa{Number(emg.quantidade) > 1 ? "s" : ""}
-                                </span>
-                                <span
-                                  style={{
-                                    background: emg.urgencia === "CRÍTICA" ? "#fee2e2" : emg.urgencia === "ALTA" ? "#ffedd5" : "#fef9c3",
-                                    color: emg.urgencia === "CRÍTICA" ? "#991b1b" : emg.urgencia === "ALTA" ? "#9a3412" : "#854d0e",
-                                    padding: "3px 8px",
-                                    borderRadius: "6px",
-                                    fontSize: "0.74rem",
-                                    fontWeight: 800,
-                                  }}
-                                >
-                                  URGÊNCIA {emg.urgencia}
-                                </span>
-                              </div>
-
-                              <div style={{ background: "#f8fafc", padding: "10px 12px", borderRadius: "10px", border: "1px solid #e2e8f0", fontSize: "0.82rem" }}>
-                                <div style={{ color: "#166534", fontWeight: 700, display: "flex", alignItems: "center", gap: "6px" }}>
-                                  <Users size={14} />
-                                  <span>{emg.doadoresAptosNotificados} doadores compatíveis no estado</span>
-                                </div>
-                                <div style={{ color: "#64748b", marginTop: "2px", fontSize: "0.76rem" }}>
-                                  Grupos: {(emg.tiposCompativeis || []).join(", ") || emg.tipo}
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Bloco 3: Mídia art.jpeg & Ações do Administrador */}
-                            <div style={{ display: "flex", flexDirection: "column", gap: "10px", alignItems: "flex-end" }}>
-                              {/* Prévia da Arte Oficial */}
+                          return (
+                            <div
+                              key={emg.id}
+                              style={{
+                                background: "#ffffff",
+                                borderRadius: "16px",
+                                border: "1px solid #e2e8f0",
+                                borderLeft: accentBorderLeft,
+                                padding: "20px 24px",
+                                boxShadow: isPending ? "0 4px 18px rgba(220, 38, 38, 0.04)" : "0 2px 8px rgba(0,0,0,0.02)",
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: "14px",
+                                transition: "all 0.2s ease",
+                              }}
+                            >
+                              {/* Barra Superior do Card: ID, Status, Urgência e Data */}
                               <div
                                 style={{
                                   display: "flex",
+                                  justifyContent: "space-between",
                                   alignItems: "center",
-                                  gap: "8px",
-                                  background: "#f8fafc",
-                                  padding: "6px 10px",
-                                  borderRadius: "8px",
-                                  border: "1px solid #e2e8f0",
-                                  fontSize: "0.75rem",
-                                  color: "#475569",
+                                  flexWrap: "wrap",
+                                  gap: "10px",
                                 }}
                               >
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                  src="/art.jpeg"
-                                  alt="Arte SOS"
-                                  style={{ width: "28px", height: "28px", borderRadius: "4px", objectFit: "cover" }}
-                                />
-                                <span>Arte Oficial <code>art.jpeg</code> vinculada</span>
-                              </div>
-
-                              {/* Botões de Ação */}
-                              <div style={{ display: "flex", gap: "8px", width: "100%", justifyContent: "flex-end" }}>
-                                {isPending && (
-                                  <>
-                                    <button
-                                      type="button"
-                                      disabled={cancellingId === emg.id || approvingId === emg.id}
-                                      onClick={() => handleCancelEmergency(emg)}
-                                      style={{
-                                        background: "#ffffff",
-                                        color: "#dc2626",
-                                        border: "1px solid #fca5a5",
-                                        padding: "10px 14px",
-                                        borderRadius: "10px",
-                                        fontWeight: 600,
-                                        fontSize: "0.84rem",
-                                        cursor: "pointer",
-                                        display: "inline-flex",
-                                        alignItems: "center",
-                                        gap: "4px",
-                                      }}
-                                    >
-                                      <Trash2 size={15} />
-                                      <span>{cancellingId === emg.id ? "Cancelando..." : "Rejeitar"}</span>
-                                    </button>
-
-                                    <button
-                                      type="button"
-                                      disabled={approvingId === emg.id || cancellingId === emg.id}
-                                      onClick={() => handleApproveEmergency(emg)}
-                                      style={{
-                                        background: "linear-gradient(135deg, #16a34a, #15803d)",
-                                        color: "#ffffff",
-                                        border: "none",
-                                        padding: "10px 18px",
-                                        borderRadius: "10px",
-                                        fontWeight: 800,
-                                        fontSize: "0.88rem",
-                                        cursor: "pointer",
-                                        display: "inline-flex",
-                                        alignItems: "center",
-                                        gap: "8px",
-                                        boxShadow: "0 4px 14px rgba(22, 163, 74, 0.3)",
-                                      }}
-                                    >
-                                      <Zap size={16} />
-                                      <span>{approvingId === emg.id ? "Disparando 1 a 1..." : "Aprovar & Disparar SOS"}</span>
-                                    </button>
-                                  </>
-                                )}
-
-                                {isDispatched && (
-                                  <button
-                                    type="button"
-                                    disabled={approvingId === emg.id}
-                                    onClick={() => handleApproveEmergency(emg)}
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                                  {/* ID Badge Anti-wrap */}
+                                  <span
                                     style={{
-                                      background: "#f8fafc",
-                                      color: "#166534",
-                                      border: "1px solid #86efac",
-                                      padding: "8px 14px",
+                                      fontSize: "0.8rem",
+                                      fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                                      fontWeight: 800,
+                                      background: "#0f172a",
+                                      color: "#f8fafc",
+                                      padding: "3px 10px",
                                       borderRadius: "8px",
-                                      fontWeight: 600,
-                                      fontSize: "0.82rem",
-                                      cursor: "pointer",
-                                      display: "inline-flex",
-                                      alignItems: "center",
-                                      gap: "6px",
+                                      letterSpacing: "0.5px",
+                                      whiteSpace: "nowrap",
                                     }}
                                   >
-                                    <RefreshCw size={13} />
-                                    <span>Re-enviar Disparo</span>
-                                  </button>
-                                )}
+                                    #SOS-{cleanId}
+                                  </span>
+
+                                  {/* Status Badge */}
+                                  {isPending && (
+                                    <span
+                                      style={{
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "5px",
+                                        background: "#fffbeb",
+                                        color: "#b45309",
+                                        border: "1px solid #fef3c7",
+                                        padding: "3px 10px",
+                                        borderRadius: "20px",
+                                        fontSize: "0.74rem",
+                                        fontWeight: 800,
+                                        whiteSpace: "nowrap",
+                                      }}
+                                    >
+                                      <span
+                                        style={{
+                                          width: "7px",
+                                          height: "7px",
+                                          borderRadius: "50%",
+                                          background: "#f59e0b",
+                                          display: "inline-block",
+                                        }}
+                                      />
+                                      <span>PENDENTE DE APROVAÇÃO</span>
+                                    </span>
+                                  )}
+                                  {isDispatched && (
+                                    <span
+                                      style={{
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "5px",
+                                        background: "#ecfdf5",
+                                        color: "#15803d",
+                                        border: "1px solid #bbf7d0",
+                                        padding: "3px 10px",
+                                        borderRadius: "20px",
+                                        fontSize: "0.74rem",
+                                        fontWeight: 800,
+                                        whiteSpace: "nowrap",
+                                      }}
+                                    >
+                                      <CheckCheck size={13} />
+                                      <span>DISPARADO VIA WHATSAPP</span>
+                                    </span>
+                                  )}
+                                  {isCancelled && (
+                                    <span
+                                      style={{
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "5px",
+                                        background: "#f1f5f9",
+                                        color: "#64748b",
+                                        border: "1px solid #cbd5e1",
+                                        padding: "3px 10px",
+                                        borderRadius: "20px",
+                                        fontSize: "0.74rem",
+                                        fontWeight: 700,
+                                        whiteSpace: "nowrap",
+                                      }}
+                                    >
+                                      <Ban size={13} />
+                                      <span>CANCELADO</span>
+                                    </span>
+                                  )}
+
+                                  {/* Urgency Badge */}
+                                  <span
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "5px",
+                                      background: urgencyBg,
+                                      color: urgencyColor,
+                                      border: `1px solid ${urgencyBorder}`,
+                                      padding: "3px 10px",
+                                      borderRadius: "20px",
+                                      fontSize: "0.74rem",
+                                      fontWeight: 800,
+                                      whiteSpace: "nowrap",
+                                    }}
+                                  >
+                                    <span
+                                      style={{
+                                        width: "6px",
+                                        height: "6px",
+                                        borderRadius: "50%",
+                                        background: urgencyColor,
+                                        display: "inline-block",
+                                      }}
+                                    />
+                                    <span>URGÊNCIA {urgencia}</span>
+                                  </span>
+                                </div>
+
+                                {/* Formatted Timestamp */}
+                                <div
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "5px",
+                                    fontSize: "0.78rem",
+                                    color: "#64748b",
+                                    background: "#f8fafc",
+                                    padding: "3px 10px",
+                                    borderRadius: "8px",
+                                    border: "1px solid #e2e8f0",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  <Calendar size={13} color="#94a3b8" />
+                                  <span>{formatEmergencyDate(emg.criadoEm)}</span>
+                                </div>
+                              </div>
+
+                              {/* Linha Divisória Sutil */}
+                              <div style={{ borderTop: "1px solid #f1f5f9" }} />
+
+                              {/* Conteúdo Principal do Card (Informações à Esquerda, Mídia e Ações à Direita) */}
+                              <div
+                                style={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                  flexWrap: "wrap",
+                                  gap: "24px",
+                                }}
+                              >
+                                {/* Bloco Esquerdo: Hospital, Metadados & Demanda Sanguínea */}
+                                <div style={{ flex: "1 1 360px" }}>
+                                  {/* Nome do Hospital */}
+                                  <h3
+                                    style={{
+                                      fontSize: "1.18rem",
+                                      fontWeight: 800,
+                                      color: "#0f172a",
+                                      margin: "0 0 8px 0",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "8px",
+                                    }}
+                                  >
+                                    <div
+                                      style={{
+                                        width: "28px",
+                                        height: "28px",
+                                        borderRadius: "8px",
+                                        background: "#fef2f2",
+                                        display: "grid",
+                                        placeItems: "center",
+                                      }}
+                                    >
+                                      <Building2 size={16} color="#dc2626" />
+                                    </div>
+                                    <span>{emg.hospital || "Hospital Regional"}</span>
+                                  </h3>
+
+                                  {/* Metadados: Localização, Paciente/Leito, Contato */}
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      flexWrap: "wrap",
+                                      gap: "14px",
+                                      fontSize: "0.84rem",
+                                      color: "#475569",
+                                      marginBottom: "12px",
+                                    }}
+                                  >
+                                    <div style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                                      <MapPin size={14} color="#64748b" />
+                                      <span>{emg.cidade}, <strong>{emg.estado}</strong></span>
+                                    </div>
+
+                                    <div style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                                      <User size={14} color="#64748b" />
+                                      <span>Paciente: <strong>{emg.paciente}</strong></span>
+                                    </div>
+
+                                    <div style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                                      <Phone size={14} color="#64748b" />
+                                      <span>Contato: <strong>{emg.contato}</strong></span>
+                                    </div>
+                                  </div>
+
+                                  {/* Painel de Demanda Sanguínea & Cobertura Regional */}
+                                  <div
+                                    style={{
+                                      background: "#f8fafc",
+                                      padding: "10px 14px",
+                                      borderRadius: "12px",
+                                      border: "1px solid #e2e8f0",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "space-between",
+                                      flexWrap: "wrap",
+                                      gap: "12px",
+                                    }}
+                                  >
+                                    {/* Droplet & Quantidade */}
+                                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                      <span
+                                        style={{
+                                          background: "linear-gradient(135deg, #dc2626, #b91c1c)",
+                                          color: "#ffffff",
+                                          padding: "5px 12px",
+                                          borderRadius: "8px",
+                                          fontSize: "1.1rem",
+                                          fontWeight: 900,
+                                          boxShadow: "0 2px 8px rgba(220, 38, 38, 0.25)",
+                                          letterSpacing: "0.5px",
+                                        }}
+                                      >
+                                        {emg.tipo}
+                                      </span>
+                                      <span style={{ fontSize: "0.88rem", fontWeight: 700, color: "#0f172a" }}>
+                                        {emg.quantidade} bolsa{Number(emg.quantidade) !== 1 ? "s" : ""} solicitada{Number(emg.quantidade) !== 1 ? "s" : ""}
+                                      </span>
+                                    </div>
+
+                                    {/* Doadores compatíveis no estado */}
+                                    <div style={{ textAlign: "right" }}>
+                                      <div
+                                        style={{
+                                          color: "#166534",
+                                          fontWeight: 700,
+                                          fontSize: "0.82rem",
+                                          display: "inline-flex",
+                                          alignItems: "center",
+                                          gap: "6px",
+                                          background: "#f0fdf4",
+                                          border: "1px solid #bbf7d0",
+                                          padding: "3px 8px",
+                                          borderRadius: "6px",
+                                        }}
+                                      >
+                                        <Users size={13} />
+                                        <span>{donorLabel}</span>
+                                      </div>
+                                      <div style={{ color: "#64748b", marginTop: "3px", fontSize: "0.74rem" }}>
+                                        Grupos aptos: {(emg.tiposCompativeis || []).join(", ") || emg.tipo}
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Histórico se já disparado */}
+                                  {isDispatched && (
+                                    <div
+                                      style={{
+                                        marginTop: "10px",
+                                        padding: "8px 12px",
+                                        background: "#f0fdf4",
+                                        borderRadius: "8px",
+                                        border: "1px solid #bbf7d0",
+                                        fontSize: "0.78rem",
+                                        color: "#166534",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "6px",
+                                      }}
+                                    >
+                                      <CheckCheck size={14} />
+                                      <span>
+                                        Disparo autorizado por <strong>{emg.aprovadoPor || "Admin"}</strong> em {formatEmergencyDate(emg.aprovadoEm)}.
+                                        {emg.disparosSucesso !== undefined && (
+                                          <span> • <strong>{emg.disparosSucesso} voluntários notificados via WhatsApp</strong></span>
+                                        )}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Bloco Direito: Prévia de Mídia e Ações */}
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: "12px",
+                                    alignItems: "flex-end",
+                                    minWidth: "220px",
+                                  }}
+                                >
+                                  {/* Arte Oficial Anexada */}
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "10px",
+                                      background: "#f8fafc",
+                                      padding: "6px 12px",
+                                      borderRadius: "10px",
+                                      border: "1px solid #e2e8f0",
+                                    }}
+                                  >
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                      src="/art.jpeg"
+                                      alt="Arte Oficial SOS"
+                                      style={{
+                                        width: "34px",
+                                        height: "34px",
+                                        borderRadius: "6px",
+                                        objectFit: "cover",
+                                        border: "1px solid #cbd5e1",
+                                        boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                                      }}
+                                    />
+                                    <div style={{ textAlign: "left" }}>
+                                      <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "#1e293b" }}>
+                                        Arte Oficial Vinculada
+                                      </div>
+                                      <div style={{ fontSize: "0.7rem", color: "#64748b" }}>
+                                        <code>art.jpeg</code> (anexo WhatsApp)
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Botões de Ação */}
+                                  <div style={{ display: "flex", gap: "8px", width: "100%", justifyContent: "flex-end" }}>
+                                    {isPending && (
+                                      <>
+                                        <button
+                                          type="button"
+                                          disabled={cancellingId === emg.id || approvingId === emg.id}
+                                          onClick={() => handleCancelEmergency(emg)}
+                                          style={{
+                                            background: "#ffffff",
+                                            color: "#dc2626",
+                                            border: "1px solid #fca5a5",
+                                            padding: "9px 14px",
+                                            borderRadius: "10px",
+                                            fontWeight: 700,
+                                            fontSize: "0.82rem",
+                                            cursor: "pointer",
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            gap: "5px",
+                                            transition: "all 0.15s ease",
+                                          }}
+                                        >
+                                          <Trash2 size={14} />
+                                          <span>{cancellingId === emg.id ? "Cancelando..." : "Rejeitar"}</span>
+                                        </button>
+
+                                        <button
+                                          type="button"
+                                          disabled={approvingId === emg.id || cancellingId === emg.id}
+                                          onClick={() => handleApproveEmergency(emg)}
+                                          style={{
+                                            background: "linear-gradient(135deg, #16a34a, #15803d)",
+                                            color: "#ffffff",
+                                            border: "none",
+                                            padding: "9px 18px",
+                                            borderRadius: "10px",
+                                            fontWeight: 800,
+                                            fontSize: "0.86rem",
+                                            cursor: "pointer",
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            gap: "8px",
+                                            boxShadow: "0 4px 12px rgba(22, 163, 74, 0.28)",
+                                            transition: "all 0.15s ease",
+                                          }}
+                                        >
+                                          <Zap size={15} />
+                                          <span>{approvingId === emg.id ? "Disparando 1 a 1..." : "Aprovar & Disparar SOS"}</span>
+                                        </button>
+                                      </>
+                                    )}
+
+                                    {isDispatched && (
+                                      <button
+                                        type="button"
+                                        disabled={approvingId === emg.id}
+                                        onClick={() => handleApproveEmergency(emg)}
+                                        style={{
+                                          background: "#f8fafc",
+                                          color: "#166534",
+                                          border: "1px solid #86efac",
+                                          padding: "8px 14px",
+                                          borderRadius: "8px",
+                                          fontWeight: 700,
+                                          fontSize: "0.82rem",
+                                          cursor: "pointer",
+                                          display: "inline-flex",
+                                          alignItems: "center",
+                                          gap: "6px",
+                                        }}
+                                      >
+                                        <RefreshCw size={13} />
+                                        <span>Re-enviar Disparo</span>
+                                      </button>
+                                    )}
+
+                                    {isCancelled && (
+                                      <span
+                                        style={{
+                                          fontSize: "0.78rem",
+                                          color: "#94a3b8",
+                                          fontStyle: "italic",
+                                        }}
+                                      >
+                                        Solicitação arquivada
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 
@@ -2009,7 +2399,7 @@ export default function AdminPage() {
                         Relatório de Disparo Concluído
                       </div>
                       <div style={{ color: "#15803d", fontSize: "0.88rem", marginTop: "4px" }}>
-                        Doadores compatíveis encontrados no SQLite: <strong>{broadcastResult.totalEncontrados ?? 0}</strong> • Mensagens enviadas: <strong>{broadcastResult.sentCount ?? 0}</strong>
+                        Doadores compatíveis encontrados na base: <strong>{broadcastResult.totalEncontrados ?? 0}</strong> • Mensagens enviadas: <strong>{broadcastResult.sentCount ?? 0}</strong>
                       </div>
                     </div>
                   )}
@@ -2055,7 +2445,7 @@ export default function AdminPage() {
                     <p style={{ color: "#64748b", fontSize: "0.85rem" }}>
                       {editingHemoId
                         ? `Atualizando registro ID: ${editingHemoId}. Modifique os campos abaixo e clique em Salvar Alterações.`
-                        : "Os hemocentros cadastrados aqui são salvos diretamente no SQLite (hemoalerta.db) e aparecem na busca pública para todos os doadores"}
+                        : "Os hemocentros cadastrados aqui são disponibilizados imediatamente na busca pública para todos os doadores"}
                     </p>
                   </div>
                 </div>
@@ -2276,10 +2666,10 @@ export default function AdminPage() {
                       {editingHemoId ? <Check size={18} /> : <Plus size={18} />}
                       <span>
                         {hemoSubmitting
-                          ? "Salvando no SQLite..."
+                          ? "Salvando dados..."
                           : editingHemoId
                           ? "Salvar Alterações"
-                          : "Salvar Hemocentro no Banco"}
+                          : "Salvar Hemocentro"}
                       </span>
                     </button>
 

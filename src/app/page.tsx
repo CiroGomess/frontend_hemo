@@ -258,7 +258,7 @@ export default async function HomePage() {
                         Rede Ativa HemoAlerta
                       </div>
                       <div style={{ fontSize: "0.78rem", color: "#64748b" }}>
-                        Dados em tempo real • SQLite integrado
+                        Dados em tempo real • Cobertura nacional
                       </div>
                     </div>
                   </div>

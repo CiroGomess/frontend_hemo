@@ -114,7 +114,7 @@ export default function PrivacidadePage() {
             <li>Consultar livremente todos os seus dados cadastrados.</li>
             <li>Atualizar seu número de WhatsApp, cidade ou disponibilidade na aba <strong>Meu Perfil</strong>.</li>
             <li>Revogar o recebimento de alertas com desativação imediata.</li>
-            <li>Solicitar a <strong>eliminação definitiva</strong> de seus dados do banco SQLite com apenas um clique.</li>
+            <li>Solicitar a <strong>eliminação definitiva</strong> de seus dados de nossa base com apenas um clique.</li>
           </ul>
 
           <h2 style={{ color: "var(--ink)", fontSize: "1.25rem", fontWeight: 700, marginTop: "28px", marginBottom: "12px" }}>
