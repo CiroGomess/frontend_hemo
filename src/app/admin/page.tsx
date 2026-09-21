@@ -13,8 +13,12 @@ import {
   createHemocentro,
   updateHemocentro,
   deleteHemocentro,
+  fetchAdminEmergencies,
+  approveAndBroadcastEmergency,
+  cancelEmergency,
   WhatsAppStatus,
   Hemocentro,
+  EmergencyResponse,
 } from "@/services/api";
 import {
   Shield,
@@ -45,6 +49,11 @@ import {
   Clock,
   Pencil,
   X,
+  Siren,
+  CheckCheck,
+  Ban,
+  Users,
+  Image as ImageIcon,
 } from "lucide-react";
 import ConfirmModal from "@/components/ConfirmModal";
 
@@ -87,6 +96,14 @@ export default function AdminPage() {
   const [alertUrgencia, setAlertUrgencia] = useState("ALTA");
   const [broadcastResult, setBroadcastResult] = useState<any | null>(null);
   const [broadcastLoading, setBroadcastLoading] = useState(false);
+
+  // Emergency Moderation State
+  const [emergenciesList, setEmergenciesList] = useState<EmergencyResponse[]>([]);
+  const [emergenciesLoading, setEmergenciesLoading] = useState(false);
+  const [emergencyStatusFilter, setEmergencyStatusFilter] = useState<string>("PENDENTE");
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [emergencySubTab, setEmergencySubTab] = useState<"moderacao" | "manual">("moderacao");
 
   // Hemocentros Management State
   const [hemocentros, setHemocentros] = useState<Hemocentro[]>([]);
@@ -199,6 +216,7 @@ export default function AdminPage() {
     if (!isLogged) return;
 
     loadHemocentros();
+    loadAdminEmergencies();
 
     const checkStatus = () => {
       fetchWhatsAppStatus()
@@ -221,6 +239,12 @@ export default function AdminPage() {
     const interval = setInterval(checkStatus, 2500);
     return () => clearInterval(interval);
   }, [isLogged]);
+
+  useEffect(() => {
+    if (isLogged && activeTab === "emergencia") {
+      loadAdminEmergencies();
+    }
+  }, [isLogged, activeTab, emergencyStatusFilter]);
 
   const handleLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -381,6 +405,126 @@ export default function AdminPage() {
           });
         } finally {
           setBroadcastLoading(false);
+        }
+      },
+    });
+  };
+
+  const loadAdminEmergencies = () => {
+    setEmergenciesLoading(true);
+    fetchAdminEmergencies(emergencyStatusFilter || undefined)
+      .then((data) => setEmergenciesList(data))
+      .catch((err) => console.error("Erro ao carregar chamados SOS:", err))
+      .finally(() => setEmergenciesLoading(false));
+  };
+
+  const handleApproveEmergency = (emg: EmergencyResponse) => {
+    if (waStatus.status !== "CONNECTED") {
+      showAlert({
+        title: "WhatsApp Não Conectado",
+        message: "A instância do WhatsApp Web precisa estar CONECTADA para disparar os alertas oficiais aos voluntários. Conecte o WhatsApp na primeira aba antes de aprovar.",
+        type: "warning",
+      });
+      return;
+    }
+
+    showConfirm({
+      title: `Aprovar & Disparar SOS #${emg.id}`,
+      type: "danger",
+      confirmText: "Sim, Aprovar & Disparar via WhatsApp",
+      cancelText: "Voltar / Revisar",
+      message: (
+        <div>
+          <p>
+            Você está prestes a autorizar o disparo de notificações 1 a 1 para <strong>{emg.doadoresAptosNotificados} doadores compatíveis</strong> em <strong>{emg.cidade}/{emg.estado}</strong>.
+          </p>
+          <div
+            style={{
+              margin: "12px 0",
+              padding: "14px",
+              background: "#fef2f2",
+              borderRadius: "10px",
+              border: "1px solid #fecdd3",
+              fontSize: "0.85rem",
+              color: "#991b1b",
+              lineHeight: 1.6,
+            }}
+          >
+            <div>🏥 <strong>Hospital / Local:</strong> {emg.hospital || "Hospital Regional"}</div>
+            <div>🩸 <strong>Tipo Solicitado:</strong> {emg.tipo} ({emg.quantidade} bolsa(s))</div>
+            <div>⚠️ <strong>Urgência Médica:</strong> {emg.urgencia}</div>
+            <div>👤 <strong>Paciente / Leito:</strong> {emg.paciente}</div>
+            <div>📞 <strong>Contato do Hemocentro:</strong> {emg.contato}</div>
+            <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px dashed #fca5a5", color: "#b91c1c", fontWeight: 600 }}>
+              🖼️ <strong>Arte Oficial Anexada:</strong> A imagem <code>art.jpeg</code> será enviada junto com o texto para cada voluntário com intervalo seguro de ~1.8s.
+            </div>
+          </div>
+          <p style={{ fontSize: "0.8rem", color: "#64748b" }}>
+            Apenas confirme caso os dados do hospital e a urgência tenham sido devidamente verificados.
+          </p>
+        </div>
+      ),
+      onConfirm: async () => {
+        setApprovingId(emg.id);
+        try {
+          const res = await approveAndBroadcastEmergency(emg.id);
+          showAlert({
+            title: "Disparo SOS Concluído com Sucesso!",
+            type: "success",
+            message: (
+              <div>
+                <p>{res.mensagem}</p>
+                <div style={{ marginTop: "10px", padding: "12px", background: "#f0fdf4", borderRadius: "8px", border: "1px solid #bbf7d0", fontSize: "0.85rem", color: "#166534" }}>
+                  <div>Total de doadores compatíveis: <strong>{res.disparo?.totalEncontrados ?? emg.doadoresAptosNotificados}</strong></div>
+                  <div>Mensagens entregues com sucesso: <strong>{res.disparo?.sentCount ?? 0}</strong></div>
+                  {res.disparo?.errorsCount > 0 && <div>Falhas no envio: <strong>{res.disparo?.errorsCount}</strong></div>}
+                </div>
+              </div>
+            ),
+          });
+          loadAdminEmergencies();
+        } catch (err: any) {
+          showAlert({
+            title: "Falha no Disparo",
+            message: err.message || "Erro ao conectar com a instância Venom WhatsApp.",
+            type: "danger",
+          });
+        } finally {
+          setApprovingId(null);
+        }
+      },
+    });
+  };
+
+  const handleCancelEmergency = (emg: EmergencyResponse) => {
+    showConfirm({
+      title: `Cancelar Solicitação SOS #${emg.id}`,
+      type: "warning",
+      confirmText: "Sim, Cancelar Solicitação",
+      cancelText: "Manter",
+      message: (
+        <div>
+          <p>
+            Deseja cancelar o chamado de <strong>{emg.tipo}</strong> para o <strong>{emg.hospital || emg.paciente}</strong>?
+          </p>
+          <p style={{ fontSize: "0.82rem", color: "#64748b" }}>
+            O status será marcado como CANCELADO e nenhuma mensagem será enviada aos voluntários.
+          </p>
+        </div>
+      ),
+      onConfirm: async () => {
+        setCancellingId(emg.id);
+        try {
+          await cancelEmergency(emg.id);
+          loadAdminEmergencies();
+        } catch (err: any) {
+          showAlert({
+            title: "Erro ao Cancelar",
+            message: err.message || "Não foi possível cancelar o chamado.",
+            type: "danger",
+          });
+        } finally {
+          setCancellingId(null);
         }
       },
     });
@@ -808,7 +952,21 @@ export default function AdminPage() {
               }}
             >
               <Radio size={16} />
-              <span>Disparo de Alertas SOS</span>
+              <span>Moderação & Alertas SOS</span>
+              {emergenciesList.filter((e) => (e.status || "PENDENTE") === "PENDENTE").length > 0 && (
+                <span
+                  style={{
+                    background: "#dc2626",
+                    color: "#ffffff",
+                    padding: "2px 8px",
+                    borderRadius: "999px",
+                    fontSize: "0.74rem",
+                    fontWeight: 800,
+                  }}
+                >
+                  {emergenciesList.filter((e) => (e.status || "PENDENTE") === "PENDENTE").length}
+                </span>
+              )}
             </button>
 
             <button
@@ -1193,222 +1351,668 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* ===================== TAB 2: DISPARO DE EMERGÊNCIA ===================== */}
+          {/* ===================== TAB 2: MODERAÇÃO E DISPARO DE EMERGÊNCIA ===================== */}
           {activeTab === "emergencia" && (
-            <div
-              style={{
-                background: "#ffffff",
-                borderRadius: "20px",
-                padding: "28px",
-                border: "1px solid #e2e8f0",
-                boxShadow: "0 8px 24px rgba(0, 0, 0, 0.04)",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
-                <div
-                  style={{
-                    width: "44px",
-                    height: "44px",
-                    borderRadius: "12px",
-                    background: "linear-gradient(135deg, #e11d48, #be123c)",
-                    display: "grid",
-                    placeItems: "center",
-                    color: "#fff",
-                  }}
-                >
-                  <Radio size={22} />
+            <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+              {/* Header da Aba com Navegação Sub-Abas */}
+              <div
+                style={{
+                  background: "#ffffff",
+                  borderRadius: "20px",
+                  padding: "24px 28px",
+                  border: "1px solid #e2e8f0",
+                  boxShadow: "0 8px 24px rgba(0, 0, 0, 0.04)",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "16px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <div
+                    style={{
+                      width: "44px",
+                      height: "44px",
+                      borderRadius: "12px",
+                      background: "linear-gradient(135deg, #dc2626, #991b1b)",
+                      display: "grid",
+                      placeItems: "center",
+                      color: "#fff",
+                      boxShadow: "0 6px 16px rgba(220, 38, 38, 0.25)",
+                    }}
+                  >
+                    <Siren size={24} />
+                  </div>
+                  <div>
+                    <h2 style={{ fontSize: "1.25rem", fontWeight: 800, color: "#0f172a", margin: 0 }}>
+                      Central de Moderação & Disparo SOS WhatsApp
+                    </h2>
+                    <p style={{ color: "#64748b", fontSize: "0.85rem", margin: "2px 0 0 0" }}>
+                      Valide solicitações de emergência e libere o envio 1 a 1 aos doadores com a imagem oficial <code>art.jpeg</code>
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h2 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#0f172a" }}>
-                    Disparo de Alerta de Emergência SOS
-                  </h2>
-                  <p style={{ color: "#64748b", fontSize: "0.85rem" }}>
-                    O backend Python pesquisa os doadores compatíveis no SQLite (<code>hemoalerta.db</code>) e comanda o envio via Venom
-                  </p>
+
+                {/* Sub-abas: Fila de Moderação vs Disparo Manual */}
+                <div style={{ display: "flex", gap: "8px", background: "#f1f5f9", padding: "4px", borderRadius: "10px" }}>
+                  <button
+                    type="button"
+                    onClick={() => setEmergencySubTab("moderacao")}
+                    style={{
+                      background: emergencySubTab === "moderacao" ? "#ffffff" : "transparent",
+                      color: emergencySubTab === "moderacao" ? "#0f172a" : "#64748b",
+                      border: "none",
+                      padding: "8px 16px",
+                      borderRadius: "8px",
+                      fontWeight: 700,
+                      fontSize: "0.85rem",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      boxShadow: emergencySubTab === "moderacao" ? "0 2px 6px rgba(0,0,0,0.08)" : "none",
+                    }}
+                  >
+                    <Clock size={15} />
+                    <span>Fila de Chamados Recebidos</span>
+                    <span style={{ background: "#fee2e2", color: "#991b1b", padding: "1px 6px", borderRadius: "6px", fontSize: "0.72rem" }}>
+                      {emergenciesList.filter((e) => (e.status || "PENDENTE") === "PENDENTE").length}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setEmergencySubTab("manual")}
+                    style={{
+                      background: emergencySubTab === "manual" ? "#ffffff" : "transparent",
+                      color: emergencySubTab === "manual" ? "#0f172a" : "#64748b",
+                      border: "none",
+                      padding: "8px 16px",
+                      borderRadius: "8px",
+                      fontWeight: 700,
+                      fontSize: "0.85rem",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      boxShadow: emergencySubTab === "manual" ? "0 2px 6px rgba(0,0,0,0.08)" : "none",
+                    }}
+                  >
+                    <Radio size={15} />
+                    <span>Disparo Avulso Manual</span>
+                  </button>
                 </div>
               </div>
 
-              <form onSubmit={handleBroadcast}>
+              {/* CONTEÚDO 1: FILA DE MODERAÇÃO DE CHAMADOS */}
+              {emergencySubTab === "moderacao" && (
                 <div
                   style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
-                    gap: "14px",
-                    marginBottom: "20px",
+                    background: "#ffffff",
+                    borderRadius: "20px",
+                    padding: "28px",
+                    border: "1px solid #e2e8f0",
+                    boxShadow: "0 8px 24px rgba(0, 0, 0, 0.04)",
                   }}
                 >
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
-                      Tipo Sanguíneo
-                    </label>
-                    <select
-                      value={alertTipo}
-                      onChange={(e) => setAlertTipo(e.target.value)}
+                  {/* Filtros e Barra de Ações */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "14px", marginBottom: "24px" }}>
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                      {[
+                        { id: "PENDENTE", label: "Aguardando Aprovação", count: emergenciesList.filter((e) => (e.status || "PENDENTE") === "PENDENTE").length, color: "#d97706", bg: "#fef3c7" },
+                        { id: "DISPARADO", label: "Disparados no WhatsApp", count: emergenciesList.filter((e) => e.status === "DISPARADO").length, color: "#16a34a", bg: "#dcfce7" },
+                        { id: "CANCELADO", label: "Cancelados", count: emergenciesList.filter((e) => e.status === "CANCELADO").length, color: "#64748b", bg: "#f1f5f9" },
+                        { id: "", label: "Todos os Chamados", count: emergenciesList.length, color: "#0f172a", bg: "#e2e8f0" },
+                      ].map((filtro) => {
+                        const isSelected = emergencyStatusFilter === filtro.id;
+                        return (
+                          <button
+                            key={filtro.id}
+                            type="button"
+                            onClick={() => setEmergencyStatusFilter(filtro.id)}
+                            style={{
+                              background: isSelected ? "#0f172a" : "#f8fafc",
+                              color: isSelected ? "#ffffff" : "#475569",
+                              border: isSelected ? "1px solid #0f172a" : "1px solid #cbd5e1",
+                              padding: "7px 14px",
+                              borderRadius: "8px",
+                              fontWeight: 700,
+                              fontSize: "0.82rem",
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "6px",
+                            }}
+                          >
+                            <span>{filtro.label}</span>
+                            <span
+                              style={{
+                                background: isSelected ? "rgba(255,255,255,0.2)" : filtro.bg,
+                                color: isSelected ? "#ffffff" : filtro.color,
+                                padding: "1px 6px",
+                                borderRadius: "6px",
+                                fontSize: "0.72rem",
+                                fontWeight: 800,
+                              }}
+                            >
+                              {filtro.count}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={loadAdminEmergencies}
+                      disabled={emergenciesLoading}
                       style={{
-                        width: "100%",
-                        padding: "10px",
+                        background: "#ffffff",
+                        color: "#475569",
+                        border: "1px solid #cbd5e1",
+                        padding: "8px 14px",
                         borderRadius: "8px",
-                        border: "1.5px solid #e2e8f0",
+                        fontSize: "0.82rem",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                      }}
+                    >
+                      <RefreshCw size={14} className={emergenciesLoading ? "animate-spin" : ""} />
+                      <span>{emergenciesLoading ? "Atualizando..." : "Recarregar Lista"}</span>
+                    </button>
+                  </div>
+
+                  {/* Lista de Chamados */}
+                  {emergenciesLoading ? (
+                    <div style={{ textAlign: "center", padding: "60px 20px", color: "#64748b" }}>
+                      <Clock size={28} className="animate-spin" style={{ margin: "0 auto 12px" }} />
+                      <p>Carregando solicitações da base de dados...</p>
+                    </div>
+                  ) : emergenciesList.length === 0 ? (
+                    <div
+                      style={{
+                        textAlign: "center",
+                        padding: "48px 24px",
+                        background: "#f8fafc",
+                        borderRadius: "16px",
+                        border: "1.5px dashed #cbd5e1",
+                      }}
+                    >
+                      <CheckCircle2 size={40} color="#16a34a" style={{ margin: "0 auto 12px" }} />
+                      <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#0f172a", margin: "0 0 6px 0" }}>
+                        Nenhuma solicitação encontrada
+                      </h3>
+                      <p style={{ color: "#64748b", fontSize: "0.88rem", margin: 0 }}>
+                        {emergencyStatusFilter
+                          ? `Não há chamados com status "${emergencyStatusFilter}".`
+                          : "Nenhum chamado de emergência foi cadastrado ainda."}
+                      </p>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                      {emergenciesList.map((emg) => {
+                        const status = emg.status || "PENDENTE";
+                        const isPending = status === "PENDENTE";
+                        const isDispatched = status === "DISPARADO";
+                        const isCancelled = status === "CANCELADO";
+
+                        return (
+                          <div
+                            key={emg.id}
+                            style={{
+                              background: isPending ? "#fffdfa" : "#ffffff",
+                              borderRadius: "16px",
+                              border: isPending
+                                ? "2px solid #fde68a"
+                                : isDispatched
+                                ? "1.5px solid #bbf7d0"
+                                : "1px solid #e2e8f0",
+                              padding: "20px 24px",
+                              boxShadow: isPending ? "0 4px 14px rgba(245, 158, 11, 0.08)" : "0 2px 8px rgba(0,0,0,0.02)",
+                              display: "grid",
+                              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+                              gap: "20px",
+                              alignItems: "center",
+                            }}
+                          >
+                            {/* Bloco 1: Dados do Hospital, Paciente e Localização */}
+                            <div>
+                              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+                                <span style={{ fontSize: "0.75rem", fontFamily: "monospace", background: "#f1f5f9", padding: "2px 6px", borderRadius: "4px", color: "#475569" }}>
+                                  #{emg.id}
+                                </span>
+
+                                {/* Status Badge */}
+                                {isPending && (
+                                  <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", background: "#fef3c7", color: "#92400e", border: "1px solid #fde68a", padding: "2px 8px", borderRadius: "12px", fontSize: "0.72rem", fontWeight: 800 }}>
+                                    <Clock size={12} />
+                                    <span>PENDENTE DE APROVAÇÃO</span>
+                                  </span>
+                                )}
+                                {isDispatched && (
+                                  <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", background: "#dcfce7", color: "#166534", border: "1px solid #86efac", padding: "2px 8px", borderRadius: "12px", fontSize: "0.72rem", fontWeight: 800 }}>
+                                    <CheckCheck size={12} />
+                                    <span>DISPARADO VIA WHATSAPP</span>
+                                  </span>
+                                )}
+                                {isCancelled && (
+                                  <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", background: "#f1f5f9", color: "#64748b", border: "1px solid #cbd5e1", padding: "2px 8px", borderRadius: "12px", fontSize: "0.72rem", fontWeight: 700 }}>
+                                    <Ban size={12} />
+                                    <span>CANCELADO</span>
+                                  </span>
+                                )}
+
+                                <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
+                                  {emg.criadoEm || "Hoje"}
+                                </span>
+                              </div>
+
+                              <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "#0f172a", margin: "0 0 4px 0", display: "flex", alignItems: "center", gap: "6px" }}>
+                                <Building2 size={16} color="#dc2626" />
+                                <span>{emg.hospital || "Hospital Regional"}</span>
+                              </h3>
+
+                              <div style={{ fontSize: "0.85rem", color: "#475569", display: "flex", flexDirection: "column", gap: "3px" }}>
+                                <div>
+                                  <MapPin size={13} style={{ display: "inline", marginRight: "4px", verticalAlign: "middle" }} />
+                                  <span>{emg.cidade}, <strong>{emg.estado}</strong></span>
+                                </div>
+                                <div>
+                                  <User size={13} style={{ display: "inline", marginRight: "4px", verticalAlign: "middle" }} />
+                                  <span>Paciente / Leito: <strong>{emg.paciente}</strong></span>
+                                </div>
+                                <div>
+                                  <Phone size={13} style={{ display: "inline", marginRight: "4px", verticalAlign: "middle" }} />
+                                  <span>Contato: <strong>{emg.contato}</strong></span>
+                                </div>
+                              </div>
+
+                              {/* Histórico de aprovação / disparos */}
+                              {isDispatched && (
+                                <div style={{ marginTop: "10px", padding: "8px 10px", background: "#f0fdf4", borderRadius: "8px", border: "1px solid #bbf7d0", fontSize: "0.78rem", color: "#166534" }}>
+                                  Disparo realizado por <strong>{emg.aprovadoPor || "Admin"}</strong> em {emg.aprovadoEm || "Data recente"}.
+                                  {emg.disparosSucesso !== undefined && (
+                                    <span> • <strong>{emg.disparosSucesso} enviadas</strong></span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Bloco 2: Tipo Sanguíneo, Urgência e Doadores Aptos */}
+                            <div>
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
+                                <span
+                                  style={{
+                                    background: "linear-gradient(135deg, #dc2626, #b91c1c)",
+                                    color: "#ffffff",
+                                    padding: "6px 14px",
+                                    borderRadius: "10px",
+                                    fontSize: "1.2rem",
+                                    fontWeight: 900,
+                                    boxShadow: "0 4px 10px rgba(220, 38, 38, 0.25)",
+                                  }}
+                                >
+                                  {emg.tipo}
+                                </span>
+                                <span style={{ fontSize: "0.88rem", fontWeight: 700, color: "#0f172a" }}>
+                                  {emg.quantidade} bolsa{Number(emg.quantidade) > 1 ? "s" : ""}
+                                </span>
+                                <span
+                                  style={{
+                                    background: emg.urgencia === "CRÍTICA" ? "#fee2e2" : emg.urgencia === "ALTA" ? "#ffedd5" : "#fef9c3",
+                                    color: emg.urgencia === "CRÍTICA" ? "#991b1b" : emg.urgencia === "ALTA" ? "#9a3412" : "#854d0e",
+                                    padding: "3px 8px",
+                                    borderRadius: "6px",
+                                    fontSize: "0.74rem",
+                                    fontWeight: 800,
+                                  }}
+                                >
+                                  URGÊNCIA {emg.urgencia}
+                                </span>
+                              </div>
+
+                              <div style={{ background: "#f8fafc", padding: "10px 12px", borderRadius: "10px", border: "1px solid #e2e8f0", fontSize: "0.82rem" }}>
+                                <div style={{ color: "#166534", fontWeight: 700, display: "flex", alignItems: "center", gap: "6px" }}>
+                                  <Users size={14} />
+                                  <span>{emg.doadoresAptosNotificados} doadores compatíveis no estado</span>
+                                </div>
+                                <div style={{ color: "#64748b", marginTop: "2px", fontSize: "0.76rem" }}>
+                                  Grupos: {(emg.tiposCompativeis || []).join(", ") || emg.tipo}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Bloco 3: Mídia art.jpeg & Ações do Administrador */}
+                            <div style={{ display: "flex", flexDirection: "column", gap: "10px", alignItems: "flex-end" }}>
+                              {/* Prévia da Arte Oficial */}
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "8px",
+                                  background: "#f8fafc",
+                                  padding: "6px 10px",
+                                  borderRadius: "8px",
+                                  border: "1px solid #e2e8f0",
+                                  fontSize: "0.75rem",
+                                  color: "#475569",
+                                }}
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src="/art.jpeg"
+                                  alt="Arte SOS"
+                                  style={{ width: "28px", height: "28px", borderRadius: "4px", objectFit: "cover" }}
+                                />
+                                <span>Arte Oficial <code>art.jpeg</code> vinculada</span>
+                              </div>
+
+                              {/* Botões de Ação */}
+                              <div style={{ display: "flex", gap: "8px", width: "100%", justifyContent: "flex-end" }}>
+                                {isPending && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      disabled={cancellingId === emg.id || approvingId === emg.id}
+                                      onClick={() => handleCancelEmergency(emg)}
+                                      style={{
+                                        background: "#ffffff",
+                                        color: "#dc2626",
+                                        border: "1px solid #fca5a5",
+                                        padding: "10px 14px",
+                                        borderRadius: "10px",
+                                        fontWeight: 600,
+                                        fontSize: "0.84rem",
+                                        cursor: "pointer",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "4px",
+                                      }}
+                                    >
+                                      <Trash2 size={15} />
+                                      <span>{cancellingId === emg.id ? "Cancelando..." : "Rejeitar"}</span>
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      disabled={approvingId === emg.id || cancellingId === emg.id}
+                                      onClick={() => handleApproveEmergency(emg)}
+                                      style={{
+                                        background: "linear-gradient(135deg, #16a34a, #15803d)",
+                                        color: "#ffffff",
+                                        border: "none",
+                                        padding: "10px 18px",
+                                        borderRadius: "10px",
+                                        fontWeight: 800,
+                                        fontSize: "0.88rem",
+                                        cursor: "pointer",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "8px",
+                                        boxShadow: "0 4px 14px rgba(22, 163, 74, 0.3)",
+                                      }}
+                                    >
+                                      <Zap size={16} />
+                                      <span>{approvingId === emg.id ? "Disparando 1 a 1..." : "Aprovar & Disparar SOS"}</span>
+                                    </button>
+                                  </>
+                                )}
+
+                                {isDispatched && (
+                                  <button
+                                    type="button"
+                                    disabled={approvingId === emg.id}
+                                    onClick={() => handleApproveEmergency(emg)}
+                                    style={{
+                                      background: "#f8fafc",
+                                      color: "#166534",
+                                      border: "1px solid #86efac",
+                                      padding: "8px 14px",
+                                      borderRadius: "8px",
+                                      fontWeight: 600,
+                                      fontSize: "0.82rem",
+                                      cursor: "pointer",
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "6px",
+                                    }}
+                                  >
+                                    <RefreshCw size={13} />
+                                    <span>Re-enviar Disparo</span>
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* CONTEÚDO 2: DISPARO MANUAL AVULSO (SEM CHAMADO PRÉVIO) */}
+              {emergencySubTab === "manual" && (
+                <div
+                  style={{
+                    background: "#ffffff",
+                    borderRadius: "20px",
+                    padding: "28px",
+                    border: "1px solid #e2e8f0",
+                    boxShadow: "0 8px 24px rgba(0, 0, 0, 0.04)",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
+                    <div
+                      style={{
+                        width: "44px",
+                        height: "44px",
+                        borderRadius: "12px",
+                        background: "linear-gradient(135deg, #e11d48, #be123c)",
+                        display: "grid",
+                        placeItems: "center",
+                        color: "#fff",
+                      }}
+                    >
+                      <Radio size={22} />
+                    </div>
+                    <div>
+                      <h2 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#0f172a", margin: 0 }}>
+                        Disparo de Alerta Avulso Imediato
+                      </h2>
+                      <p style={{ color: "#64748b", fontSize: "0.85rem", margin: "2px 0 0 0" }}>
+                        Utilize caso queira emitir um alerta SOS direto para uma região sem precisar de uma solicitação cadastrada previamente
+                      </p>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleBroadcast}>
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+                        gap: "14px",
+                        marginBottom: "20px",
+                      }}
+                    >
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
+                          Tipo Sanguíneo
+                        </label>
+                        <select
+                          value={alertTipo}
+                          onChange={(e) => setAlertTipo(e.target.value)}
+                          style={{
+                            width: "100%",
+                            padding: "10px",
+                            borderRadius: "8px",
+                            border: "1.5px solid #e2e8f0",
+                            fontWeight: 700,
+                            color: "#be123c",
+                          }}
+                        >
+                          {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map((t) => (
+                            <option key={t} value={t}>
+                              {t}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
+                          Estado (UF)
+                        </label>
+                        <input
+                          type="text"
+                          maxLength={2}
+                          value={alertEstado}
+                          onChange={(e) => setAlertEstado(e.target.value.toUpperCase())}
+                          style={{
+                            width: "100%",
+                            padding: "10px",
+                            borderRadius: "8px",
+                            border: "1.5px solid #e2e8f0",
+                            fontWeight: 600,
+                          }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
+                          Cidade
+                        </label>
+                        <input
+                          type="text"
+                          value={alertCidade}
+                          onChange={(e) => setAlertCidade(e.target.value)}
+                          style={{
+                            width: "100%",
+                            padding: "10px",
+                            borderRadius: "8px",
+                            border: "1.5px solid #e2e8f0",
+                          }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
+                          Hospital / Hemocentro
+                        </label>
+                        <input
+                          type="text"
+                          value={alertHospital}
+                          onChange={(e) => setAlertHospital(e.target.value)}
+                          style={{
+                            width: "100%",
+                            padding: "10px",
+                            borderRadius: "8px",
+                            border: "1.5px solid #e2e8f0",
+                          }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
+                          Nível de Urgência
+                        </label>
+                        <select
+                          value={alertUrgencia}
+                          onChange={(e) => setAlertUrgencia(e.target.value)}
+                          style={{
+                            width: "100%",
+                            padding: "10px",
+                            borderRadius: "8px",
+                            border: "1.5px solid #e2e8f0",
+                            fontWeight: 600,
+                          }}
+                        >
+                          <option value="ALTA">Alta</option>
+                          <option value="CRÍTICA">Crítica</option>
+                          <option value="MÉDIA">Média</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Prévia da Mensagem */}
+                    <div
+                      style={{
+                        background: "#f0fdf4",
+                        border: "1px solid #bbf7d0",
+                        borderRadius: "14px",
+                        padding: "16px",
+                        marginBottom: "20px",
+                      }}
+                    >
+                      <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "#166534", marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
+                        <MessageSquare size={16} />
+                        <span>Prévia da Mensagem no WhatsApp (com <code>art.jpeg</code> anexada):</span>
+                      </div>
+                      <div
+                        style={{
+                          background: "#ffffff",
+                          border: "1px solid #dcfce7",
+                          borderRadius: "10px",
+                          padding: "12px 16px",
+                          fontFamily: "monospace",
+                          fontSize: "0.85rem",
+                          color: "#1e293b",
+                          lineHeight: 1.5,
+                        }}
+                      >
+                        🚨 *ALERTA DE EMERGÊNCIA - HEMOALERTA* 🚨<br />
+                        Olá {"{Nome do Doador}"},<br />
+                        Precisamos com *URGÊNCIA MÁXIMA ({alertUrgencia})* de sangue tipo *{alertTipo}* em {alertCidade} / {alertEstado}.<br />
+                        🏥 Local: {alertHospital}<br />
+                        ❤️ Você está cadastrado no HemoAlerta como compatível. Cada doação salva até 4 vidas!
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={broadcastLoading || waStatus.status !== "CONNECTED"}
+                      style={{
+                        background: waStatus.status === "CONNECTED" ? "linear-gradient(135deg, #e11d48, #be123c)" : "#cbd5e1",
+                        color: "#ffffff",
+                        border: "none",
+                        padding: "14px 28px",
+                        borderRadius: "10px",
                         fontWeight: 700,
-                        color: "#be123c",
+                        fontSize: "1rem",
+                        cursor: waStatus.status === "CONNECTED" ? "pointer" : "not-allowed",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        boxShadow: waStatus.status === "CONNECTED" ? "0 6px 20px rgba(225, 29, 72, 0.28)" : "none",
                       }}
                     >
-                      {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map((t) => (
-                        <option key={t} value={t}>
-                          {t}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                      <Zap size={18} />
+                      <span>{broadcastLoading ? "Disparando mensagens 1 a 1 com intervalo de 1.8s..." : "Disparar Alerta Avulso aos Doadores"}</span>
+                    </button>
+                  </form>
 
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
-                      Estado (UF)
-                    </label>
-                    <input
-                      type="text"
-                      maxLength={2}
-                      value={alertEstado}
-                      onChange={(e) => setAlertEstado(e.target.value.toUpperCase())}
+                  {broadcastResult && (
+                    <div
                       style={{
-                        width: "100%",
-                        padding: "10px",
-                        borderRadius: "8px",
-                        border: "1.5px solid #e2e8f0",
-                        fontWeight: 600,
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
-                      Cidade
-                    </label>
-                    <input
-                      type="text"
-                      value={alertCidade}
-                      onChange={(e) => setAlertCidade(e.target.value)}
-                      style={{
-                        width: "100%",
-                        padding: "10px",
-                        borderRadius: "8px",
-                        border: "1.5px solid #e2e8f0",
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
-                      Hospital / Hemocentro
-                    </label>
-                    <input
-                      type="text"
-                      value={alertHospital}
-                      onChange={(e) => setAlertHospital(e.target.value)}
-                      style={{
-                        width: "100%",
-                        padding: "10px",
-                        borderRadius: "8px",
-                        border: "1.5px solid #e2e8f0",
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
-                      Nível de Urgência
-                    </label>
-                    <select
-                      value={alertUrgencia}
-                      onChange={(e) => setAlertUrgencia(e.target.value)}
-                      style={{
-                        width: "100%",
-                        padding: "10px",
-                        borderRadius: "8px",
-                        border: "1.5px solid #e2e8f0",
-                        fontWeight: 600,
+                        marginTop: "20px",
+                        background: "#f0fdf4",
+                        border: "1px solid #86efac",
+                        borderRadius: "12px",
+                        padding: "16px 20px",
                       }}
                     >
-                      <option value="ALTA">Alta</option>
-                      <option value="CRÍTICA">Crítica</option>
-                      <option value="MÉDIA">Média</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Prévia da Mensagem */}
-                <div
-                  style={{
-                    background: "#f0fdf4",
-                    border: "1px solid #bbf7d0",
-                    borderRadius: "14px",
-                    padding: "16px",
-                    marginBottom: "20px",
-                  }}
-                >
-                  <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "#166534", marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
-                    <MessageSquare size={16} />
-                    <span>Prévia da Mensagem no WhatsApp:</span>
-                  </div>
-                  <div
-                    style={{
-                      background: "#ffffff",
-                      border: "1px solid #dcfce7",
-                      borderRadius: "10px",
-                      padding: "12px 16px",
-                      fontFamily: "monospace",
-                      fontSize: "0.85rem",
-                      color: "#1e293b",
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    🚨 *ALERTA DE EMERGÊNCIA - HEMOALERTA* 🚨<br />
-                    Olá {"{Nome do Doador}"},<br />
-                    Precisamos com *URGÊNCIA MÁXIMA ({alertUrgencia})* de sangue tipo *{alertTipo}* em {alertCidade} / {alertEstado}.<br />
-                    🏥 Local: {alertHospital}<br />
-                    ❤️ Você está cadastrado no HemoAlerta como compatível. Cada doação salva até 4 vidas!
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={broadcastLoading || waStatus.status !== "CONNECTED"}
-                  style={{
-                    background: waStatus.status === "CONNECTED" ? "linear-gradient(135deg, #e11d48, #be123c)" : "#cbd5e1",
-                    color: "#ffffff",
-                    border: "none",
-                    padding: "14px 28px",
-                    borderRadius: "10px",
-                    fontWeight: 700,
-                    fontSize: "1rem",
-                    cursor: waStatus.status === "CONNECTED" ? "pointer" : "not-allowed",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "10px",
-                    boxShadow: waStatus.status === "CONNECTED" ? "0 6px 20px rgba(225, 29, 72, 0.28)" : "none",
-                  }}
-                >
-                  <Zap size={18} />
-                  <span>{broadcastLoading ? "Disparando mensagens pelo WhatsApp..." : "Disparar Alerta Oficial aos Doadores"}</span>
-                </button>
-              </form>
-
-              {broadcastResult && (
-                <div
-                  style={{
-                    marginTop: "20px",
-                    background: "#f0fdf4",
-                    border: "1px solid #86efac",
-                    borderRadius: "12px",
-                    padding: "16px 20px",
-                  }}
-                >
-                  <div style={{ color: "#166534", fontWeight: 700, fontSize: "0.95rem" }}>
-                    Relatório de Disparo Concluído
-                  </div>
-                  <div style={{ color: "#15803d", fontSize: "0.88rem", marginTop: "4px" }}>
-                    Doadores compatíveis encontrados no SQLite: <strong>{broadcastResult.totalEncontrados ?? 0}</strong> • Mensagens enviadas: <strong>{broadcastResult.sentCount ?? 0}</strong>
-                  </div>
+                      <div style={{ color: "#166534", fontWeight: 700, fontSize: "0.95rem" }}>
+                        Relatório de Disparo Concluído
+                      </div>
+                      <div style={{ color: "#15803d", fontSize: "0.88rem", marginTop: "4px" }}>
+                        Doadores compatíveis encontrados no SQLite: <strong>{broadcastResult.totalEncontrados ?? 0}</strong> • Mensagens enviadas: <strong>{broadcastResult.sentCount ?? 0}</strong>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

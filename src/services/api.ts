@@ -37,16 +37,30 @@ export interface CompatibilityResponse {
   doadoresIds: string[];
 }
 
+export interface RegionalAvailabilityResponse {
+  estado: string;
+  cidade?: string | null;
+  totalDoadores: number;
+  porTipo: Record<string, number>;
+  tiposComDoadores: string[];
+}
+
 export interface EmergencyResponse {
   id: string;
   tipo: string;
   quantidade: string;
   paciente: string;
+  hospital?: string;
   cidade: string;
   estado: string;
   urgencia: string;
   contato: string;
   detalhes?: string;
+  status?: string;
+  aprovadoEm?: string;
+  aprovadoPor?: string;
+  disparosSucesso?: number;
+  disparosFalha?: number;
   doadoresAptosNotificados: number;
   tiposCompativeis: string[];
   mensagemTexto: string;
@@ -157,6 +171,16 @@ export async function deleteDonor(id: string) {
   return resData;
 }
 
+export async function fetchRegionAvailability(estado: string, cidade?: string): Promise<RegionalAvailabilityResponse> {
+  const query = new URLSearchParams();
+  query.append("estado", estado);
+  if (cidade) query.append("cidade", cidade);
+
+  const res = await fetch(`${API_BASE_URL}/emergencias/disponibilidade-regiao?${query.toString()}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Erro ao consultar disponibilidade na região");
+  return res.json();
+}
+
 export async function checkCompatibility(tipoSanguineo: string, estado: string, cidade?: string): Promise<CompatibilityResponse> {
   const res = await fetch(`${API_BASE_URL}/emergencias/calcular-compatibilidade`, {
     method: "POST",
@@ -171,6 +195,7 @@ export async function sendEmergency(data: {
   tipo: string;
   quantidade: number;
   paciente: string;
+  hospital?: string;
   cidade: string;
   estado: string;
   urgencia: string;
@@ -318,6 +343,38 @@ export async function broadcastWhatsAppAlert(payload: {
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.detail || data.error || "Erro ao disparar alertas");
+  return data;
+}
+
+export async function fetchAdminEmergencies(status?: string): Promise<EmergencyResponse[]> {
+  const query = status ? `?status=${encodeURIComponent(status)}` : "";
+  const res = await fetch(`${API_BASE_URL}/admin/emergencias${query}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Erro ao carregar chamados de emergência");
+  return res.json();
+}
+
+export async function approveAndBroadcastEmergency(emergencyId: string): Promise<{
+  sucesso: boolean;
+  mensagem: string;
+  disparo: any;
+  emergencia: EmergencyResponse;
+}> {
+  const res = await fetch(`${API_BASE_URL}/admin/emergencias/${emergencyId}/aprovar`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Erro ao aprovar e disparar emergência");
+  return data;
+}
+
+export async function cancelEmergency(emergencyId: string): Promise<{ sucesso: boolean; mensagem: string }> {
+  const res = await fetch(`${API_BASE_URL}/admin/emergencias/${emergencyId}/cancelar`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Erro ao cancelar chamado");
   return data;
 }
 
