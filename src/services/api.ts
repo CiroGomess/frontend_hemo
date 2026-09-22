@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://backendhemoalert.squareweb.app/api";
+const API_BASE_URL = "https://backendhemoalert.squareweb.app/api";
 
 export interface Donor {
   id: string;
