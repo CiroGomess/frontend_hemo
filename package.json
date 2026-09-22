@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:prod": "NEXT_TELEMETRY_DISABLED=1 NODE_OPTIONS=--max-old-space-size=700 next build --webpack",
     "start": "next start",
     "lint": "eslint"
   },

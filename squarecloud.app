@@ -3,4 +3,4 @@ MAIN=package.json
 MEMORY=1200
 VERSION=recommended
 SUBDOMAIN=hemoalerta
-START=npm run build && npx next start -p 80
+START=npm run build:prod && npx next start -p 80
