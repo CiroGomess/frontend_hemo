@@ -1,6 +1,6 @@
 DISPLAY_NAME=HemoAlerta Frontend
 MAIN=package.json
-MEMORY=1200
+MEMORY=512
 VERSION=recommended
-SUBDOMAIN=hemoalerta
-START=npm run build:prod && npx next start -p 80
+SUBDOMAIN=hemoalert
+START= npx next start -p 80
