@@ -1,20 +1,10 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, Hanken_Grotesk } from "next/font/google";
+// Fontes auto-hospedadas (next/font/google falha no build da Square Cloud)
+import "@fontsource-variable/bricolage-grotesque";
+import "@fontsource-variable/hanken-grotesk";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-
-const bricolage = Bricolage_Grotesque({
-  subsets: ["latin"],
-  variable: "--font-display",
-  weight: ["400", "600", "700", "800"],
-});
-
-const hanken = Hanken_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-body",
-  weight: ["300", "400", "500", "600", "700"],
-});
 
 export const metadata: Metadata = {
   title: "HemoAlerta — Cadastro de Doador",
@@ -27,7 +17,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="pt-BR" className={`${bricolage.variable} ${hanken.variable}`}>
+    <html lang="pt-BR">
       <body style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
         <div className="bg-grain" aria-hidden="true"></div>
         <Navbar />
